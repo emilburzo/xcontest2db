@@ -2,7 +2,7 @@ package com.emilburzo.service.rss
 
 import com.emilburzo.service.Flight
 import java.time.LocalDateTime
-import java.time.ZoneOffset
+import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 
@@ -28,7 +28,7 @@ fun mapFlight(title: String, link: String): Flight {
         pilotName = pilot,
         pilotUsername = username,
         url = link,
-        flightDate = Date(flightDate.toEpochSecond(ZoneOffset.of("+3")) * 1000) // FIXME
+        flightDate = Date.from(flightDate.atZone(ZoneId.of("Europe/Bucharest")).toInstant())
     )
 }
 

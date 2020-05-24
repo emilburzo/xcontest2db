@@ -65,4 +65,18 @@ class FlightMapperTest {
         assertEquals(flight.flightDate.time, 1590226380000)
     }
 
+    @Test
+    fun testFlightMapperDaylightSavings() {
+        val flight = mapFlight(
+            title = "23.02.20 [49.34 km :: free_flight] DAN PIRGHIE",
+            link = "https://www.xcontest.org/romania/zboruri/detalii:DANPIRGHIE/23.02.2020/12:33"
+        )
+
+        assertEquals(flight.distanceKm, 49.34)
+        assertEquals(flight.type, "free_flight")
+        assertEquals(flight.pilotName, "DAN PIRGHIE")
+        assertEquals(flight.pilotUsername, "DANPIRGHIE")
+        assertEquals(flight.flightDate.time, 1582453980000)
+    }
+
 }
