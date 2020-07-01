@@ -20,13 +20,8 @@ class Xcontest2Db(
     }
 
     private fun getFlights(rssUrl: String): List<Flight> {
-        return try {
-            val content = http.getContent(rssUrl) ?: return emptyList()
-            rss.getFlights(content)
-        } catch (e: Exception) {
-            logger.warn("error for ${rssUrl}: ${e.message}")
-            emptyList()
-        }
+        val content = http.getContent(rssUrl) ?: return emptyList()
+        return rss.getFlights(content)
     }
 
 }
