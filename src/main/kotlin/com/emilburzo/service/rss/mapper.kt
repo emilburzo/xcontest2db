@@ -19,7 +19,7 @@ fun mapFlight(title: String, link: String): Flight {
     val username = urlMatchResult.groupValues[1]
     val date = urlMatchResult.groupValues[2]
     val time = urlMatchResult.groupValues[3]
-    val flightDate = LocalDateTime.parse("$date $time", DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm"))
+    val flightDate = LocalDateTime.parse("$date $time", DateTimeFormatter.ofPattern("d.MM.yyyy HH:mm"))
 
     return Flight(
         title = title,
@@ -34,4 +34,4 @@ fun mapFlight(title: String, link: String): Flight {
 
 private val FLIGHT_REGEX =
     "([0-9]{2}\\.[0-9]{2}\\.[0-9]{2}) \\[([0-9]+\\.[0-9]+) km :: ([a-z]+_[a-z]+)\\] (.*)".toRegex()
-private val URL_REGEX = ".*\\/detalii:(.*)\\/([0-9]{2}\\.[0-9]{2}\\.[0-9]{4})\\/([0-9]{2}:[0-9]{2})".toRegex()
+private val URL_REGEX = ".*\\/detalii:(.*)\\/([0-9]{1,2}\\.[0-9]{2}\\.[0-9]{4})\\/([0-9]{2}:[0-9]{2})".toRegex()
