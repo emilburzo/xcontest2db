@@ -5,7 +5,6 @@ import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.insert
 import org.jetbrains.exposed.sql.select
-import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 
 /**
@@ -27,31 +26,29 @@ class Db(
             password = pass
         )
 
-        transaction {
-            // create table if it doesn't already exist
-            SchemaUtils.create(DbFlight)
+        // create table if it doesn't already exist
+        SchemaUtils.create(DbFlight)
 
-            // for the urls we would attempt to insert, check if any of them already exist
-            val newUrls = flights.map { it.url }.toSet()
-            val existingUrls = DbFlight.select { DbFlight.url.inList(newUrls) }
-                .map { it[DbFlight.url] }
-                .toSet()
+        // for the urls we would attempt to insert, check if any of them already exist
+        val newUrls = flights.map { it.url }.toSet()
+        val existingUrls = DbFlight.select { DbFlight.url.inList(newUrls) }
+            .map { it[DbFlight.url] }
+            .toSet()
 
-            for (flight in flights) {
-                // skip URLs that are already in the database
-                if (flight.url in existingUrls) {
-                    continue
-                }
+        for (flight in flights) {
+            // skip URLs that are already in the database
+            if (flight.url in existingUrls) {
+                continue
+            }
 
-                DbFlight.insert {
-                    it[title] = flight.title
-                    it[distanceKm] = flight.distanceKm
-                    it[type] = flight.type
-                    it[pilotName] = flight.pilotName
-                    it[pilotUsername] = flight.pilotUsername
-                    it[url] = flight.url
-                    it[flightDate] = DateTime(flight.flightDate)
-                }
+            DbFlight.insert {
+                it[title] = flight.title
+                it[distanceKm] = flight.distanceKm
+                it[type] = flight.type
+                it[pilotName] = flight.pilotName
+                it[pilotUsername] = flight.pilotUsername
+                it[url] = flight.url
+                it[flightDate] = DateTime(flight.flightDate)
             }
         }
     }
