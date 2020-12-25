@@ -15,8 +15,41 @@ class Xcontest2Db(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     fun run() {
-        val flights = getFlights(FLIGHTS_RSS_URL)
+        // get latest from RSS feed
+        val rssFlights = getFlights(FLIGHTS_RSS_URL)
+
+        // fetch the ones we already know
+        val existingRssFlightUrls = getExistingRssFlightUrls(rssFlights)
+
+        // fetch info missing in the RSS feed
+        val flights = rssFlights.map { mapRssFlightToFlight(it) }
+
+        // persist
         db.persist(flights)
+    }
+
+    private fun getExistingRssFlightUrls(rssFlights: List<RssFlight>): Set<String> {
+        val rssUrls = rssFlights.map { it.url }.toSet()
+        return db.findExistingUrls(rssUrls)
+    }
+
+    private fun mapRssFlightToFlight(rssFlight: RssFlight): Flight {
+        TODO("todo")
+//        return Flight(
+//            id =,
+//            start = rssFlight.flightDate,
+//            pilotName = rssFlight.pilotName,
+//            pilotUsername = rssFlight.pilotUsername,
+//            takeoffName =,
+//            takeoffPoint =,
+//            type = rssFlight.type,
+//            distanceKm = rssFlight.distanceKm,
+//            score =,
+//            airtime =,
+//            gliderName =,
+//            gliderClass =,
+//            url = rssFlight.url,
+//        )
     }
 
     private fun getFlights(rssUrl: String): List<RssFlight> {

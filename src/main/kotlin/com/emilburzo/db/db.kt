@@ -1,6 +1,7 @@
 package com.emilburzo.db
 
 import com.emilburzo.service.Flight
+import com.emilburzo.service.RssFlight
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.insert
@@ -30,31 +31,26 @@ class Db(
         // create table if it doesn't already exist
         transaction { SchemaUtils.create(DbFlight) }
 
-        // for the urls we would attempt to insert, check if any of them already exist
-        val newUrls = flights.map { it.url }.toSet()
-        val existingUrls = transaction {
-            DbFlight.select { DbFlight.url.inList(newUrls) }
-                .map { it[DbFlight.url] }
-                .toSet()
-        }
-
         for (flight in flights) {
-            // skip URLs that are already in the database
-            if (flight.url in existingUrls) {
-                continue
-            }
-
             transaction {
                 DbFlight.insert {
-                    it[title] = flight.title
-                    it[distanceKm] = flight.distanceKm
-                    it[type] = flight.type
-                    it[pilotName] = flight.pilotName
-                    it[pilotUsername] = flight.pilotUsername
-                    it[url] = flight.url
-                    it[flightDate] = DateTime(flight.flightDate)
+//                    it[title] = flight.title
+//                    it[distanceKm] = flight.distanceKm
+//                    it[type] = flight.type
+//                    it[pilotName] = flight.pilotName
+//                    it[pilotUsername] = flight.pilotUsername
+//                    it[url] = flight.url
+//                    it[start] = DateTime(flight.flightDate)
                 }
             }
+        }
+    }
+
+    fun findExistingUrls(rssUrls: Set<String>): Set<String> {
+        return transaction {
+            DbFlight.select { DbFlight.url.inList(rssUrls) }
+                .map { it[DbFlight.url] }
+                .toSet()
         }
     }
 }

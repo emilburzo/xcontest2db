@@ -1,13 +1,23 @@
 package com.emilburzo.service.http
 
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import io.ktor.client.*
+import io.ktor.client.features.json.*
+import io.ktor.client.request.*
+
 
 /**
  * Created by emil on 07.12.2019.
  */
 
-val httpClient = OkHttpClient()
+val client = HttpClient() {
+    install(JsonFeature) {
+        serializer = JaGsonSerializer {
+            // Configurable .GsonBuilder
+            serializeNulls()
+            disableHtmlEscaping()
+        }
+    }
+}
 
 class Http {
 
