@@ -19,7 +19,7 @@ class Xcontest2Db(
         db.persist(flights)
     }
 
-    private fun getFlights(rssUrl: String): List<Flight> {
+    private fun getFlights(rssUrl: String): List<RssFlight> {
         val content = http.getContent(rssUrl) ?: return emptyList()
         return rss.getFlights(content)
     }

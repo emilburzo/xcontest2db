@@ -1,6 +1,6 @@
 package com.emilburzo.service.rss
 
-import com.emilburzo.service.Flight
+import com.emilburzo.service.RssFlight
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -9,7 +9,7 @@ import java.util.*
 /**
  * Created by emil on 24.05.2020.
  */
-fun mapFlight(title: String, link: String): Flight {
+fun mapRssFlight(title: String, link: String): RssFlight {
     val flightMatchResult = FLIGHT_REGEX.findAll(title).first()
     val distanceKm = flightMatchResult.groupValues[2]
     val type = flightMatchResult.groupValues[3]
@@ -21,7 +21,7 @@ fun mapFlight(title: String, link: String): Flight {
     val time = urlMatchResult.groupValues[3]
     val flightDate = LocalDateTime.parse("$date $time", DateTimeFormatter.ofPattern("d.MM.yyyy HH:mm"))
 
-    return Flight(
+    return RssFlight(
         title = title,
         distanceKm = distanceKm.toDouble(),
         type = type,

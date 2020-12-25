@@ -1,17 +1,17 @@
 package com.emilburzo
 
-import com.emilburzo.service.rss.mapFlight
+import com.emilburzo.service.rss.mapRssFlight
 import org.junit.Test
 import kotlin.test.assertEquals
 
 /**
  * Created by emil on 24.05.2020.
  */
-class FlightMapperTest {
+class RssFlightMapperTest {
 
     @Test
     fun testFlightMapperRealExample0() {
-        val flight = mapFlight(
+        val flight = mapRssFlight(
             title = "16.05.20 [1.81 km :: fai_triangle] Ciprian Cucerzan",
             link = "https://www.xcontest.org/romania/zboruri/detalii:cuci/16.05.2020/11:09"
         )
@@ -25,7 +25,7 @@ class FlightMapperTest {
 
     @Test
     fun testFlightMapperRealExample1() {
-        val flight = mapFlight(
+        val flight = mapRssFlight(
             title = "23.05.20 [2.60 km :: free_triangle] Emese Fodor",
             link = "https://www.xcontest.org/romania/zboruri/detalii:Emese/23.05.2020/14:26"
         )
@@ -39,7 +39,7 @@ class FlightMapperTest {
 
     @Test
     fun testFlightMapperRealExample2() {
-        val flight = mapFlight(
+        val flight = mapRssFlight(
             title = "23.05.20 [1.67 km :: fai_triangle] sergiu bal",
             link = "https://www.xcontest.org/romania/zboruri/detalii:sergiulica_2/23.05.2020/14:26"
         )
@@ -53,7 +53,7 @@ class FlightMapperTest {
 
     @Test
     fun testFlightMapperRealExample3() {
-        val flight = mapFlight(
+        val flight = mapRssFlight(
             title = "23.05.20 [49.34 km :: free_flight] DAN PIRGHIE",
             link = "https://www.xcontest.org/romania/zboruri/detalii:DANPIRGHIE/23.05.2020/12:33"
         )
@@ -67,7 +67,7 @@ class FlightMapperTest {
 
     @Test
     fun testFlightMapperDaylightSavings() {
-        val flight = mapFlight(
+        val flight = mapRssFlight(
             title = "23.02.20 [49.34 km :: free_flight] DAN PIRGHIE",
             link = "https://www.xcontest.org/romania/zboruri/detalii:DANPIRGHIE/23.02.2020/12:33"
         )
@@ -81,7 +81,7 @@ class FlightMapperTest {
 
     @Test
     fun testFlightMapperNewMonth() {
-        val flight = mapFlight(
+        val flight = mapRssFlight(
             title = "01.07.20 [20.58 km :: free_triangle] sergiu bal",
             link = "https://www.xcontest.org/romania/zboruri/detalii:sergiulica_2/1.07.2020/10:50"
         )
