@@ -17,6 +17,7 @@
         <kotlin.code.style>official</kotlin.code.style>
         <junit.version>4.13.1</junit.version>
         <main.class>com.emilburzo.main.MainKt</main.class>
+        <kotlin.exposed.version>0.28.1</kotlin.exposed.version>
     </properties>
 
     <repositories>
@@ -46,22 +47,22 @@
         <dependency>
             <groupId>org.jetbrains.exposed</groupId>
             <artifactId>exposed-core</artifactId>
-            <version>0.18.1</version>
+            <version>${kotlin.exposed.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.exposed</groupId>
             <artifactId>exposed-dao</artifactId>
-            <version>0.18.1</version>
+            <version>${kotlin.exposed.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.exposed</groupId>
             <artifactId>exposed-jdbc</artifactId>
-            <version>0.18.1</version>
+            <version>${kotlin.exposed.version}</version>
         </dependency>
         <dependency>
             <groupId>org.jetbrains.exposed</groupId>
             <artifactId>exposed-jodatime</artifactId>
-            <version>0.18.1</version>
+            <version>${kotlin.exposed.version}</version>
         </dependency>
         <dependency>
             <groupId>org.postgresql</groupId>
