@@ -25,8 +25,10 @@ object DbTakeoff : Table(name = "takeoffs") {
     val name = varchar(name = "name", length = 200)
     val centroid = point(name = "centroid")
 
+    // custom indexes
     val centroidIndex = index(columns = arrayOf(centroid), indexType = "GIST")
 
+    // pk
     override val primaryKey = PrimaryKey(id)
 }
 
