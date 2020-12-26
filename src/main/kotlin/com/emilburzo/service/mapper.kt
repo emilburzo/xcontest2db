@@ -3,15 +3,16 @@ package com.emilburzo.service
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Element
 import org.postgis.Point
+import java.net.URL
 
 fun mapFlight(html: String, rssFlight: RssFlight): Flight {
     val flightDetail = Jsoup.parse(html)
-    val takeoffName = mapTakeoffName(flightDetail.selectFirst(SELECTOR_TAKEOFF_NAME))
-    val startPoint = mapStartPoint(flightDetail.selectFirst(SELECTOR_TAKEOFF_NAME))
-    val score = mapScore(flightDetail.selectFirst(SELECTOR_TAKEOFF_NAME))
-    val airtime = mapAirtime(flightDetail.selectFirst(SELECTOR_TAKEOFF_NAME))
-    val gliderName = mapGliderName(flightDetail.selectFirst(SELECTOR_TAKEOFF_NAME))
-    val gliderClass = mapGliderClass(flightDetail.selectFirst(SELECTOR_TAKEOFF_NAME))
+    val takeoffName = mapTakeoffName(flightDetail.selectFirst(SELECTOR_TAKEOFF))
+    val startPoint = mapStartPoint(flightDetail.selectFirst(SELECTOR_TAKEOFF))
+    val score = mapScore(flightDetail.selectFirst(SELECTOR_SCORE))
+    val airtime = mapAirtime(flightDetail.selectFirst(SELECTOR_AIRTIME))
+    val gliderName = mapGliderName(flightDetail.selectFirst(SELECTOR_GLIDER))
+    val gliderClass = mapGliderClass(flightDetail.selectFirst(SELECTOR_GLIDER))
 
     return Flight(
         pilotName = rssFlight.pilotName,
@@ -29,33 +30,39 @@ fun mapFlight(html: String, rssFlight: RssFlight): Flight {
     )
 }
 
-fun mapGliderClass(element: Element?): String {
-    TODO("Not yet implemented")
+fun mapGliderClass(element: Element): String {
+    return element.attr("class")
+        .split(" ")
+        .last()
 }
 
-fun mapGliderName(element: Element?): String {
-    TODO("Not yet implemented")
+fun mapGliderName(element: Element): String {
+    return element.attr("title")
 }
 
-fun mapAirtime(element: Element?): Int {
-    TODO("Not yet implemented")
+fun mapAirtime(element: Element): Int {
+    val parts = element.text().split(":")
+    val hours = parts[0].toInt()
+    val minutes = parts[1].toInt()
+    return (hours * 60) + minutes
 }
 
-fun mapScore(element: Element?): Double {
-    TODO("Not yet implemented")
+fun mapScore(element: Element): Double {
+    return element.text().toDouble()
 }
 
-private fun mapStartPoint(element: Element?): Point {
-    element ?: throw IllegalArgumentException()
-
-    val href = element.attr("href")
-    val title = element.attr("title")
-    TODO("Not yet implemented")
+private fun mapStartPoint(element: Element): Point {
+    // https://www.xcontest.org/world/en/flights-search/?filter[point]=23.68482 46.02835&list[sort]=pts
+    val parts = URL(element.attr("href")).query
+        .split("&")
+        .first()
+        .split("=")
+        .last()
+        .split(" ")
+    return Point(parts[0].toDouble(), parts[1].toDouble())
 }
 
-private fun mapTakeoffName(element: Element?): String {
-    element ?: throw IllegalArgumentException()
-
+private fun mapTakeoffName(element: Element): String {
     // "Celosvětové vyhledávání přeletů:  Daia Română"
     return element.attr("title")
         .split(":")
@@ -64,5 +71,12 @@ private fun mapTakeoffName(element: Element?): String {
 }
 
 
-const val SELECTOR_TAKEOFF_NAME =
+const val SELECTOR_TAKEOFF =
     "#flight > div.XCflight > div.XCbaseInfo > table > tbody > tr:nth-child(3) > td > a:nth-child(2)"
+
+const val SELECTOR_SCORE =
+    "#flight > div.XCflight > div.XCbaseInfo > table > tbody > tr:nth-child(4) > td.pts.nowrap > strong"
+
+const val SELECTOR_AIRTIME = "#flight > div.XCflight > div.XCbaseInfo > table > tbody > tr:nth-child(6) > td.dur > span"
+
+const val SELECTOR_GLIDER = "#flight > div.XCflight > div.XCbaseInfo > table > tbody > tr:nth-child(5) > td"

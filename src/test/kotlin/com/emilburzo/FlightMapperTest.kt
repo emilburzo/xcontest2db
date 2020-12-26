@@ -19,7 +19,7 @@ class FlightMapperTest {
 
         assertEquals(flight.pilotName, "Gabriel-Alexandru Ivan")
         assertEquals(flight.pilotUsername, "grindboyrol")
-        assertEquals(flight.startTime.time, 1589616540000)
+        assertEquals(flight.startTime.time, 1608803460000)
         assertEquals(flight.startPoint, Point(23.68482, 46.02835))
         assertEquals(flight.takeoffName, "Daia Română")
         assertEquals(flight.type, "free_triangle")
