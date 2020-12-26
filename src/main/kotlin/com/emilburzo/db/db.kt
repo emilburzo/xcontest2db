@@ -25,12 +25,12 @@ class Db(
             user = user,
             password = pass
         )
+
+        // create table if it doesn't already exist
+        transaction { SchemaUtils.create(DbFlight) }
     }
 
     fun persist(flights: List<Flight>) {
-        // create table if it doesn't already exist
-        transaction { SchemaUtils.create(DbFlight) }
-
         for (flight in flights) {
             transaction {
                 DbFlight.insert {
