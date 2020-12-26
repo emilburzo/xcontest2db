@@ -1,28 +1,22 @@
 package com.emilburzo.service.http
 
 import io.ktor.client.*
-import io.ktor.client.features.json.*
+import io.ktor.client.features.*
 import io.ktor.client.request.*
 
 
-/**
- * Created by emil on 07.12.2019.
- */
-
-val client = HttpClient() {
-    install(JsonFeature) {
-        serializer = JaGsonSerializer {
-            // Configurable .GsonBuilder
-            serializeNulls()
-            disableHtmlEscaping()
-        }
-    }
-}
+//private val httpClient = HttpClient(CIO) {
+//    install(JsonFeature) {
+//        serializer = JacksonSerializer()
+//    }
+//}
 
 class Http {
 
-    fun getContent(url: String): String? {
-        val request = Request.Builder().url(url).build()
-        return httpClient.newCall(request).execute().body?.string()
+    suspend fun getContent(url: String): String {
+        HttpClient().use { client ->
+            return client.get(url)
+        }
     }
+
 }

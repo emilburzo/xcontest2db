@@ -3,6 +3,7 @@ package com.emilburzo.service
 import com.emilburzo.db.Db
 import com.emilburzo.service.http.Http
 import com.emilburzo.service.rss.Rss
+import kotlinx.coroutines.runBlocking
 import org.slf4j.LoggerFactory
 
 
@@ -16,7 +17,7 @@ class Xcontest2Db(
 
     fun run() {
         // get latest from RSS feed
-        val rssFlights = getFlights(FLIGHTS_RSS_URL)
+        val rssFlights = getRssFlights(FLIGHTS_RSS_URL)
 
         // fetch the ones we already know
         val existingRssFlightUrls = getExistingRssFlightUrls(rssFlights)
@@ -52,8 +53,10 @@ class Xcontest2Db(
 //        )
     }
 
-    private fun getFlights(rssUrl: String): List<RssFlight> {
-        val content = http.getContent(rssUrl) ?: return emptyList()
+    private fun getRssFlights(rssUrl: String): List<RssFlight> {
+        val content = runBlocking {
+            http.getContent(rssUrl)
+        }
         return rss.getFlights(content)
     }
 

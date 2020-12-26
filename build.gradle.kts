@@ -18,9 +18,9 @@ val kotlin_exposed_version = "0.28.1"
 val ktor_version = "1.5.0"
 dependencies {
     testImplementation(kotlin("test-junit"))
-    implementation("io.ktor:ktor-jackson:${ktor_version}")
-    implementation("io.ktor:ktor-client-core:${ktor_version}")
     implementation("io.ktor:ktor-client-cio:${ktor_version}")
+    implementation("io.ktor:ktor-client-json:${ktor_version}")
+    implementation("io.ktor:ktor-client-jackson:${ktor_version}")
     implementation("org.jetbrains.exposed:exposed-core:${kotlin_exposed_version}")
     implementation("org.jetbrains.exposed:exposed-dao:${kotlin_exposed_version}")
     implementation("org.jetbrains.exposed:exposed-jdbc:${kotlin_exposed_version}")
