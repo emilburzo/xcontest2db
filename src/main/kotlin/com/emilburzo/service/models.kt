@@ -5,11 +5,11 @@ import java.util.*
 
 data class Flight(
     val id: Long,
-    val start: Date,
     val pilotName: String,
     val pilotUsername: String,
+    val startTime: Date,
+    val startPoint: Point,
     val takeoffName: String?,
-    val takeoffPoint: Point,
     val type: String,
     val distanceKm: Double,
     val score: Double,

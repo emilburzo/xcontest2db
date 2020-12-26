@@ -6,15 +6,15 @@ import org.jetbrains.exposed.sql.jodatime.datetime
 
 object DbPilot : Table(name = "pilots") {
     val id = long(name = "id").autoIncrement()
-    val name = varchar(name = "name", length = 200)
-    val username = varchar(name = "username", length = 100).index()
+    val name = varchar(name = "name", length = 200).uniqueIndex()
+    val username = varchar(name = "username", length = 100).uniqueIndex()
 
     override val primaryKey = PrimaryKey(id)
 }
 
 object DbGlider : Table(name = "gliders") {
     val id = long(name = "id").autoIncrement()
-    val name = varchar(name = "name", length = 100)
+    val name = varchar(name = "name", length = 100).uniqueIndex()
     val category = varchar(name = "category", length = 20)
 
     override val primaryKey = PrimaryKey(id)
@@ -22,7 +22,7 @@ object DbGlider : Table(name = "gliders") {
 
 object DbTakeoff : Table(name = "takeoffs") {
     val id = long(name = "id").autoIncrement()
-    val name = varchar(name = "name", length = 200)
+    val name = varchar(name = "name", length = 200).uniqueIndex()
     val centroid = point(name = "centroid")
 
     // custom indexes
