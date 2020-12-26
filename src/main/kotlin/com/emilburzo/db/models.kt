@@ -34,7 +34,7 @@ object DbTakeoff : Table(name = "takeoffs") {
 
 object DbFlight : Table(name = "flights") {
     // columns
-    val id = long(name = "id")
+    val id = long(name = "id").autoIncrement()
     val pilot = reference(name = "pilot_id", refColumn = DbPilot.id)
     val takeoff = reference(name = "takeoff_id", refColumn = DbTakeoff.id)
     val startTime = datetime(name = "start_time").index() // https://github.com/JetBrains/Exposed/issues/221
