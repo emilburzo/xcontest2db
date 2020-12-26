@@ -3,7 +3,7 @@ package com.emilburzo.service
 import com.emilburzo.db.Db
 import com.emilburzo.service.http.Http
 import com.emilburzo.service.rss.Rss
-import kotlinx.coroutines.runBlocking
+import org.jsoup.Jsoup
 import org.slf4j.LoggerFactory
 
 
@@ -35,28 +35,13 @@ class Xcontest2Db(
     }
 
     private fun mapRssFlightToFlight(rssFlight: RssFlight): Flight {
-        TODO("todo")
-//        return Flight(
-//            id =,
-//            start = rssFlight.flightDate,
-//            pilotName = rssFlight.pilotName,
-//            pilotUsername = rssFlight.pilotUsername,
-//            takeoffName =,
-//            takeoffPoint =,
-//            type = rssFlight.type,
-//            distanceKm = rssFlight.distanceKm,
-//            score =,
-//            airtime =,
-//            gliderName =,
-//            gliderClass =,
-//            url = rssFlight.url,
-//        )
+        val flightDetailHtml = http.getJsContent(rssFlight.url)
+        val flightDetail = Jsoup.parse(flightDetailHtml)
+        return mapFlight(html = flightDetailHtml, rssFlight = rssFlight)
     }
 
     private fun getRssFlights(rssUrl: String): List<RssFlight> {
-        val content = runBlocking {
-            http.getContent(rssUrl)
-        }
+        val content = http.getContent(rssUrl)
         return rss.getFlights(content)
     }
 

@@ -4,7 +4,6 @@ import org.postgis.Point
 import java.util.*
 
 data class Flight(
-    val id: Long,
     val pilotName: String,
     val pilotUsername: String,
     val startTime: Date,

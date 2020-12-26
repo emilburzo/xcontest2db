@@ -1,8 +1,11 @@
 package com.emilburzo.service.http
 
 import io.ktor.client.*
-import io.ktor.client.features.*
+import io.ktor.client.engine.cio.*
+import io.ktor.client.features.json.*
 import io.ktor.client.request.*
+import io.ktor.http.*
+import kotlinx.coroutines.runBlocking
 
 
 //private val httpClient = HttpClient(CIO) {
@@ -11,12 +14,28 @@ import io.ktor.client.request.*
 //    }
 //}
 
+
 class Http {
 
-    suspend fun getContent(url: String): String {
-        HttpClient().use { client ->
-            return client.get(url)
+    fun getJsContent(url: String): String {
+        return runBlocking {
+            HttpClient() {
+                install(JsonFeature)
+            }.use { client ->
+                client.post<String> {
+                    url(BROWSERLESS_URL)
+                    contentType(ContentType.Application.Json)
+                    body = BrowserlessContent(url)
+                }
+            }
         }
     }
 
+    fun getContent(url: String): String {
+        return runBlocking {
+            HttpClient().use { client ->
+                client.get(url)
+            }
+        }
+    }
 }
