@@ -36,7 +36,7 @@ object DbFlight : Table(name = "flights") {
     // columns
     val id = long(name = "id").autoIncrement()
     val pilot = reference(name = "pilot_id", refColumn = DbPilot.id)
-    val takeoff = reference(name = "takeoff_id", refColumn = DbTakeoff.id)
+    val takeoff = reference(name = "takeoff_id", refColumn = DbTakeoff.id).nullable()
     val startTime = datetime(name = "start_time").index() // https://github.com/JetBrains/Exposed/issues/221
     val startPoint = point(name = "start_point")
     val type = varchar(name = "type", length = 512)

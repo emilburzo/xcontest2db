@@ -3,18 +3,35 @@ package com.emilburzo.service
 import org.postgis.Point
 import java.util.*
 
+data class Pilot(
+    val id: Long?,
+    val name: String,
+    val username: String,
+)
+
+data class Takeoff(
+    val id: Long?,
+    val name: String,
+    val centroid: Point
+)
+
+data class Glider(
+    val id: Long?,
+    val name: String,
+    val category: String,
+)
+
 data class Flight(
-    val pilotName: String,
-    val pilotUsername: String,
+    val id: Long?,
+    val pilot: Pilot,
+    val takeoff: Takeoff?,
     val startTime: Date,
     val startPoint: Point,
-    val takeoffName: String?,
     val type: String,
     val distanceKm: Double,
     val score: Double,
     val airtime: Int,
-    val gliderName: String,
-    val gliderClass: String,
+    val glider: Glider,
     val url: String,
 )
 
