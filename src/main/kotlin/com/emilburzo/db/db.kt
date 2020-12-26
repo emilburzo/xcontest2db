@@ -4,8 +4,10 @@ import com.emilburzo.service.Flight
 import com.emilburzo.service.Glider
 import com.emilburzo.service.Pilot
 import com.emilburzo.service.Takeoff
+import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
+import org.joda.time.DateTime
 
 /**
  * Created by emil on 07.12.2019.
@@ -30,19 +32,47 @@ class Db(
         transaction { SchemaUtils.create(DbFlight) }
     }
 
-    fun persist(flights: List<Flight>) {
-        for (flight in flights) {
-            transaction {
-                DbFlight.insert {
-//                    it[title] = flight.title
-//                    it[distanceKm] = flight.distanceKm
-//                    it[type] = flight.type
-//                    it[pilotName] = flight.pilotName
-//                    it[pilotUsername] = flight.pilotUsername
-//                    it[url] = flight.url
-//                    it[start] = DateTime(flight.flightDate)
-                }
+    fun persist(flight: Flight, pilotId: Long, takeoffId: Long?, gliderId: Long) {
+        transaction {
+            DbFlight.insert {
+                it[pilot] = EntityID(pilotId, DbPilot)
+                it[takeoff] = EntityID(takeoffId!!, DbTakeoff)
+                it[startTime] = DateTime(flight.startTime)
+                it[startPoint] = flight.startPoint
+                it[type] = flight.type
+                it[distanceKm] = flight.distanceKm
+                it[score] = flight.score
+                it[airtime] = flight.airtime
+                it[glider] = EntityID(gliderId, DbGlider)
+                it[url] = flight.url
             }
+        }
+    }
+
+    fun persist(pilot: Pilot): Long {
+        return transaction {
+            DbPilot.insertAndGetId {
+                it[name] = pilot.name
+                it[username] = pilot.username
+            }.value
+        }
+    }
+
+    fun persist(takeoff: Takeoff): Long {
+        return transaction {
+            DbTakeoff.insertAndGetId {
+                it[name] = takeoff.name
+                it[centroid] = takeoff.centroid
+            }.value
+        }
+    }
+
+    fun persist(glider: Glider): Long {
+        return transaction {
+            DbGlider.insertAndGetId {
+                it[name] = glider.name
+                it[category] = glider.category
+            }.value
         }
     }
 
@@ -54,42 +84,47 @@ class Db(
         }
     }
 
-    fun findAllPilots(): List<Pilot> {
+    fun findPilot(username: String): Pilot? {
         return transaction {
-            DbPilot.selectAll()
+            DbPilot.select { DbPilot.username.eq(username) }
+                .limit(n = 1)
                 .map {
                     Pilot(
-                        id = it[DbPilot.id],
+                        id = it[DbPilot.id].value,
                         name = it[DbPilot.name],
                         username = it[DbPilot.username]
                     )
-                }
+                }.firstOrNull()
         }
     }
 
-    fun findAllGliders(): List<Glider> {
+    fun findGlider(name: String): Glider? {
         return transaction {
-            DbGlider.selectAll()
+            DbGlider.select { DbGlider.name.eq(name) }
+                .limit(n = 1)
                 .map {
                     Glider(
-                        id = it[DbGlider.id],
+                        id = it[DbGlider.id].value,
                         name = it[DbGlider.name],
                         category = it[DbGlider.category]
                     )
-                }
+                }.firstOrNull()
         }
     }
 
-    fun findAllTakeoffs(): List<Takeoff> {
+    fun findTakeoff(name: String?): Takeoff? {
+        name ?: return null
+
         return transaction {
-            DbTakeoff.selectAll()
+            DbTakeoff.select { DbTakeoff.name.eq(name) }
+                .limit(n = 1)
                 .map {
                     Takeoff(
-                        id = it[DbTakeoff.id],
+                        id = it[DbTakeoff.id].value,
                         name = it[DbTakeoff.name],
                         centroid = it[DbTakeoff.centroid]
                     )
-                }
+                }.firstOrNull()
         }
     }
 }

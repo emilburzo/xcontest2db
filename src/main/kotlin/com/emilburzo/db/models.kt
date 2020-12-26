@@ -1,40 +1,29 @@
 package com.emilburzo.db
 
-import org.jetbrains.exposed.sql.Table
+import org.jetbrains.exposed.dao.id.LongIdTable
 import org.jetbrains.exposed.sql.jodatime.datetime
 
 
-object DbPilot : Table(name = "pilots") {
-    val id = long(name = "id").autoIncrement()
+object DbPilot : LongIdTable(name = "pilots") {
     val name = varchar(name = "name", length = 200).uniqueIndex()
     val username = varchar(name = "username", length = 100).uniqueIndex()
-
-    override val primaryKey = PrimaryKey(id)
 }
 
-object DbGlider : Table(name = "gliders") {
-    val id = long(name = "id").autoIncrement()
+object DbGlider : LongIdTable(name = "gliders") {
     val name = varchar(name = "name", length = 100).uniqueIndex()
     val category = varchar(name = "category", length = 20)
-
-    override val primaryKey = PrimaryKey(id)
 }
 
-object DbTakeoff : Table(name = "takeoffs") {
-    val id = long(name = "id").autoIncrement()
+object DbTakeoff : LongIdTable(name = "takeoffs") {
     val name = varchar(name = "name", length = 200).uniqueIndex()
     val centroid = point(name = "centroid")
 
     // custom indexes
     val centroidIndex = index(columns = arrayOf(centroid), indexType = "GIST")
-
-    // pk
-    override val primaryKey = PrimaryKey(id)
 }
 
-object DbFlight : Table(name = "flights") {
+object DbFlight : LongIdTable(name = "flights") {
     // columns
-    val id = long(name = "id").autoIncrement()
     val pilot = reference(name = "pilot_id", refColumn = DbPilot.id)
     val takeoff = reference(name = "takeoff_id", refColumn = DbTakeoff.id).nullable()
     val startTime = datetime(name = "start_time").index() // https://github.com/JetBrains/Exposed/issues/221
@@ -48,7 +37,4 @@ object DbFlight : Table(name = "flights") {
 
     // custom indexes
     val startPointIndex = index(columns = arrayOf(startPoint), indexType = "GIST")
-
-    // pk
-    override val primaryKey = PrimaryKey(id)
 }

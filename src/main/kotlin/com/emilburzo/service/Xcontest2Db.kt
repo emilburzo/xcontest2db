@@ -1,10 +1,10 @@
 package com.emilburzo.service
 
 import com.emilburzo.db.Db
-import com.emilburzo.db.DbPilot
 import com.emilburzo.service.http.Http
 import com.emilburzo.service.rss.Rss
 import org.slf4j.LoggerFactory
+import kotlin.contracts.contract
 
 
 class Xcontest2Db(
@@ -31,8 +31,43 @@ class Xcontest2Db(
     }
 
     private fun persist(flights: List<Flight>) {
-        x
-        db.persist(flights)
+        for (flight in flights) {
+            val pilotId = getOrCreate(flight.pilot)
+            val takeoffId = getOrCreate(flight.takeoff)
+            val gliderId = getOrCreate(flight.glider)
+
+            db.persist(
+                flight = flight,
+                pilotId = pilotId,
+                takeoffId = takeoffId,
+                gliderId = gliderId,
+            )
+        }
+    }
+
+    private fun getOrCreate(glider: Glider): Long {
+        val db = db.findGlider(glider.name)
+        if (db != null) {
+            return db.id!!
+        }
+        return this.db.persist(glider)
+    }
+
+    private fun getOrCreate(takeoff: Takeoff?): Long? {
+        takeoff ?: return null
+        val db = db.findTakeoff(takeoff.name)
+        if (db != null) {
+            return db.id
+        }
+        return this.db.persist(takeoff)
+    }
+
+    private fun getOrCreate(pilot: Pilot): Long {
+        val db = db.findPilot(pilot.username)
+        if (db != null) {
+            return db.id!!
+        }
+        return this.db.persist(pilot)
     }
 
     private fun getExistingRssFlightUrls(rssFlights: List<RssFlight>): Set<String> {
