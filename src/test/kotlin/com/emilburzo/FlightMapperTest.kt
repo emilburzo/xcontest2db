@@ -17,17 +17,17 @@ class FlightMapperTest {
         val html = getResourceAsText("/flight_detail/grindboyrol.html")
         val flight = mapFlight(html = html, rssFlight = rssFlight)
 
-        assertEquals(flight.pilotName, "Gabriel-Alexandru Ivan")
-        assertEquals(flight.pilotUsername, "grindboyrol")
+        assertEquals(flight.pilot.name, "Gabriel-Alexandru Ivan")
+        assertEquals(flight.pilot.username, "grindboyrol")
         assertEquals(flight.startTime.time, 1608803460000)
         assertEquals(flight.startPoint, Point(23.68482, 46.02835))
-        assertEquals(flight.takeoffName, "Daia Română")
+        assertEquals(flight.takeoff!!.name, "Daia Română")
         assertEquals(flight.type, "free_triangle")
         assertEquals(flight.distanceKm, 1.89)
         assertEquals(flight.score, 2.65)
         assertEquals(flight.airtime, 98)
-        assertEquals(flight.gliderName, "OZONE Zeolite GT")
-        assertEquals(flight.gliderClass, "cat-B")
+        assertEquals(flight.glider.name, "OZONE Zeolite GT")
+        assertEquals(flight.glider.category, "cat-B")
     }
 
 }

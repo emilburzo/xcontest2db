@@ -1,9 +1,9 @@
 package com.emilburzo.service
 
 import com.emilburzo.db.Db
+import com.emilburzo.db.DbPilot
 import com.emilburzo.service.http.Http
 import com.emilburzo.service.rss.Rss
-import org.jsoup.Jsoup
 import org.slf4j.LoggerFactory
 
 
@@ -24,8 +24,14 @@ class Xcontest2Db(
 
         // fetch info missing in the RSS feed
         val flights = rssFlights.map { mapRssFlightToFlight(it) }
+            .filterNot { it.url in existingRssFlightUrls }
 
         // persist
+        persist(flights)
+    }
+
+    private fun persist(flights: List<Flight>) {
+        x
         db.persist(flights)
     }
 
@@ -36,7 +42,6 @@ class Xcontest2Db(
 
     private fun mapRssFlightToFlight(rssFlight: RssFlight): Flight {
         val flightDetailHtml = http.getJsContent(rssFlight.url)
-        val flightDetail = Jsoup.parse(flightDetailHtml)
         return mapFlight(html = flightDetailHtml, rssFlight = rssFlight)
     }
 

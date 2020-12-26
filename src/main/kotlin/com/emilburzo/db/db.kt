@@ -1,10 +1,10 @@
 package com.emilburzo.db
 
 import com.emilburzo.service.Flight
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
+import com.emilburzo.service.Glider
+import com.emilburzo.service.Pilot
+import com.emilburzo.service.Takeoff
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 
 /**
@@ -51,6 +51,45 @@ class Db(
             DbFlight.select { DbFlight.url.inList(rssUrls) }
                 .map { it[DbFlight.url] }
                 .toSet()
+        }
+    }
+
+    fun findAllPilots(): List<Pilot> {
+        return transaction {
+            DbPilot.selectAll()
+                .map {
+                    Pilot(
+                        id = it[DbPilot.id],
+                        name = it[DbPilot.name],
+                        username = it[DbPilot.username]
+                    )
+                }
+        }
+    }
+
+    fun findAllGliders(): List<Glider> {
+        return transaction {
+            DbGlider.selectAll()
+                .map {
+                    Glider(
+                        id = it[DbGlider.id],
+                        name = it[DbGlider.name],
+                        category = it[DbGlider.category]
+                    )
+                }
+        }
+    }
+
+    fun findAllTakeoffs(): List<Takeoff> {
+        return transaction {
+            DbTakeoff.selectAll()
+                .map {
+                    Takeoff(
+                        id = it[DbTakeoff.id],
+                        name = it[DbTakeoff.name],
+                        centroid = it[DbTakeoff.centroid]
+                    )
+                }
         }
     }
 }

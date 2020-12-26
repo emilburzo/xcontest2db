@@ -12,25 +12,36 @@ fun mapFlight(html: String, rssFlight: RssFlight): Flight {
     val score = mapScore(flightDetail.selectFirst(SELECTOR_SCORE))
     val airtime = mapAirtime(flightDetail.selectFirst(SELECTOR_AIRTIME))
     val gliderName = mapGliderName(flightDetail.selectFirst(SELECTOR_GLIDER))
-    val gliderClass = mapGliderClass(flightDetail.selectFirst(SELECTOR_GLIDER))
+    val gliderCategory = mapGliderCategory(flightDetail.selectFirst(SELECTOR_GLIDER))
 
     return Flight(
-        pilotName = rssFlight.pilotName,
-        pilotUsername = rssFlight.pilotUsername,
+        id = null,
+        pilot = Pilot(
+            id = null,
+            name = rssFlight.pilotName,
+            username = rssFlight.pilotUsername
+        ),
         startTime = rssFlight.flightDate,
         startPoint = startPoint,
-        takeoffName = takeoffName,
+        takeoff = Takeoff(
+            id = null,
+            name = takeoffName,
+            centroid = startPoint
+        ),
         type = rssFlight.type,
         distanceKm = rssFlight.distanceKm,
         score = score,
         airtime = airtime,
-        gliderName = gliderName,
-        gliderClass = gliderClass,
+        glider = Glider(
+            id = null,
+            name = gliderName,
+            category = gliderCategory
+        ),
         url = rssFlight.url,
     )
 }
 
-fun mapGliderClass(element: Element): String {
+fun mapGliderCategory(element: Element): String {
     return element.attr("class")
         .split(" ")
         .last()
