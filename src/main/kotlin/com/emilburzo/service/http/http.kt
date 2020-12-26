@@ -1,18 +1,10 @@
 package com.emilburzo.service.http
 
 import io.ktor.client.*
-import io.ktor.client.engine.cio.*
 import io.ktor.client.features.json.*
 import io.ktor.client.request.*
 import io.ktor.http.*
 import kotlinx.coroutines.runBlocking
-
-
-//private val httpClient = HttpClient(CIO) {
-//    install(JsonFeature) {
-//        serializer = JacksonSerializer()
-//    }
-//}
 
 
 class Http {

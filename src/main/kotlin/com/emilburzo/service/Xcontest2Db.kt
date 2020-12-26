@@ -4,7 +4,6 @@ import com.emilburzo.db.Db
 import com.emilburzo.service.http.Http
 import com.emilburzo.service.rss.Rss
 import org.slf4j.LoggerFactory
-import kotlin.contracts.contract
 
 
 class Xcontest2Db(
@@ -22,27 +21,28 @@ class Xcontest2Db(
         // fetch the ones we already know
         val existingRssFlightUrls = getExistingRssFlightUrls(rssFlights)
 
-        // fetch info missing in the RSS feed
-        val flights = rssFlights.map { mapRssFlightToFlight(it) }
-            .filterNot { it.url in existingRssFlightUrls }
+        // fetch info missing in the RSS feed, excluding those we already know about
+        val flights = rssFlights.filterNot { it.url in existingRssFlightUrls }
 
         // persist
-        persist(flights)
+        flights.forEach {
+            val flight = mapRssFlightToFlight(it)
+
+            persist(flight)
+        }
     }
 
-    private fun persist(flights: List<Flight>) {
-        for (flight in flights) {
-            val pilotId = getOrCreate(flight.pilot)
-            val takeoffId = getOrCreate(flight.takeoff)
-            val gliderId = getOrCreate(flight.glider)
+    private fun persist(flight: Flight) {
+        val pilotId = getOrCreate(flight.pilot)
+        val takeoffId = getOrCreate(flight.takeoff)
+        val gliderId = getOrCreate(flight.glider)
 
-            db.persist(
-                flight = flight,
-                pilotId = pilotId,
-                takeoffId = takeoffId,
-                gliderId = gliderId,
-            )
-        }
+        db.persist(
+            flight = flight,
+            pilotId = pilotId,
+            takeoffId = takeoffId,
+            gliderId = gliderId,
+        )
     }
 
     private fun getOrCreate(glider: Glider): Long {
@@ -55,6 +55,11 @@ class Xcontest2Db(
 
     private fun getOrCreate(takeoff: Takeoff?): Long? {
         takeoff ?: return null
+
+        if (takeoff.name == "?") {
+            return null
+        }
+
         val db = db.findTakeoff(takeoff.name)
         if (db != null) {
             return db.id
