@@ -15,21 +15,28 @@ class Xcontest2Db(
     private val logger = LoggerFactory.getLogger(javaClass)
 
     fun run() {
-        // get latest from RSS feed
-        val rssFlights = getRssFlights(FLIGHTS_RSS_URL)
+//        // get latest from RSS feed
+//        val rssFlights = getRssFlights(FLIGHTS_RSS_URL)
 
-        // fetch the ones we already know
-        val existingRssFlightUrls = getExistingRssFlightUrls(rssFlights)
+        val recentFlights = getRecentFlights(FLIGHTS_RECENT_URL)
 
-        // fetch info missing in the RSS feed, excluding those we already know about
-        val flights = rssFlights.filterNot { it.url in existingRssFlightUrls }
+//        // fetch the ones we already know
+//        val existingRssFlightUrls = getExistingRssFlightUrls(rssFlights)
+//
+//        // fetch info missing in the RSS feed, excluding those we already know about
+//        val flights = rssFlights.filterNot { it.url in existingRssFlightUrls }
+//
+//        // persist
+//        flights.forEach {
+//            val flight = mapRssFlightToFlight(it)
+//
+//            persist(flight)
+//        }
+    }
 
-        // persist
-        flights.forEach {
-            val flight = mapRssFlightToFlight(it)
-
-            persist(flight)
-        }
+    private fun getRecentFlights(url: String): List<Flight> {
+        val flightsListHtml = http.getJsContent(url)
+        return mapFlights(flightsListHtml)
     }
 
     private fun persist(flight: Flight) {
@@ -82,7 +89,7 @@ class Xcontest2Db(
 
     private fun mapRssFlightToFlight(rssFlight: RssFlight): Flight {
         val flightDetailHtml = http.getJsContent(rssFlight.url)
-        return mapFlight(html = flightDetailHtml, rssFlight = rssFlight)
+        return mapFlightDetail(html = flightDetailHtml, rssFlight = rssFlight)
     }
 
     private fun getRssFlights(rssUrl: String): List<RssFlight> {
