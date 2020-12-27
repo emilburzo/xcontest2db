@@ -1,18 +1,33 @@
 package com.emilburzo.service.http
 
-import okhttp3.OkHttpClient
-import okhttp3.Request
+import io.ktor.client.*
+import io.ktor.client.features.json.*
+import io.ktor.client.request.*
+import io.ktor.http.*
+import kotlinx.coroutines.runBlocking
 
-/**
- * Created by emil on 07.12.2019.
- */
-
-val httpClient = OkHttpClient()
 
 class Http {
 
-    fun getContent(url: String): String? {
-        val request = Request.Builder().url(url).build()
-        return httpClient.newCall(request).execute().body?.string()
+    fun getJsContent(url: String): String {
+        return runBlocking {
+            HttpClient() {
+                install(JsonFeature)
+            }.use { client ->
+                client.post<String> {
+                    url(BROWSERLESS_URL)
+                    contentType(ContentType.Application.Json)
+                    body = BrowserlessContent(url)
+                }
+            }
+        }
+    }
+
+    fun getContent(url: String): String {
+        return runBlocking {
+            HttpClient().use { client ->
+                client.get(url)
+            }
+        }
     }
 }

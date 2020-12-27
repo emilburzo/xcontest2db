@@ -1,10 +1,11 @@
 package com.emilburzo.db
 
 import com.emilburzo.service.Flight
-import org.jetbrains.exposed.sql.Database
-import org.jetbrains.exposed.sql.SchemaUtils
-import org.jetbrains.exposed.sql.insert
-import org.jetbrains.exposed.sql.select
+import com.emilburzo.service.Glider
+import com.emilburzo.service.Pilot
+import com.emilburzo.service.Takeoff
+import org.jetbrains.exposed.dao.id.EntityID
+import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
 
@@ -12,14 +13,14 @@ import org.joda.time.DateTime
  * Created by emil on 07.12.2019.
  */
 class Db(
-    private val host: String = System.getenv("DB_HOST"),
-    private val port: String = System.getenv("DB_PORT") ?: "5432",
-    private val user: String = System.getenv("DB_USER") ?: "xcontest",
-    private val pass: String = System.getenv("DB_PASS"),
-    private val name: String = System.getenv("DB_NAME") ?: "xcontest"
+    host: String = System.getenv("DB_HOST"),
+    port: String = System.getenv("DB_PORT") ?: "5432",
+    user: String = System.getenv("DB_USER") ?: "xcontest",
+    pass: String = System.getenv("DB_PASS"),
+    name: String = System.getenv("DB_NAME") ?: "xcontest"
 ) {
 
-    fun persist(flights: List<Flight>) {
+    init {
         Database.connect(
             url = "jdbc:postgresql://$host:$port/$name",
             driver = "org.postgresql.Driver",
@@ -29,32 +30,103 @@ class Db(
 
         // create table if it doesn't already exist
         transaction { SchemaUtils.create(DbFlight) }
+    }
 
-        // for the urls we would attempt to insert, check if any of them already exist
-        val newUrls = flights.map { it.url }.toSet()
-        val existingUrls = transaction {
-            DbFlight.select { DbFlight.url.inList(newUrls) }
+    fun persist(flight: Flight, pilotId: Long, takeoffId: Long?, gliderId: Long) {
+        transaction {
+            DbFlight.insert {
+                it[pilot] = EntityID(pilotId, DbPilot)
+                if (takeoffId != null) {
+                    it[takeoff] = EntityID(takeoffId, DbTakeoff)
+                }
+                it[startTime] = DateTime(flight.startTime)
+                it[startPoint] = flight.startPoint
+                it[type] = flight.type
+                it[distanceKm] = flight.distanceKm
+                it[score] = flight.score
+                it[airtime] = flight.airtime
+                it[glider] = EntityID(gliderId, DbGlider)
+                it[url] = flight.url
+            }
+        }
+    }
+
+    fun persist(pilot: Pilot): Long {
+        return transaction {
+            DbPilot.insertAndGetId {
+                it[name] = pilot.name
+                it[username] = pilot.username
+            }.value
+        }
+    }
+
+    fun persist(takeoff: Takeoff): Long {
+        return transaction {
+            DbTakeoff.insertAndGetId {
+                it[name] = takeoff.name
+                it[centroid] = takeoff.centroid
+            }.value
+        }
+    }
+
+    fun persist(glider: Glider): Long {
+        return transaction {
+            DbGlider.insertAndGetId {
+                it[name] = glider.name
+                it[category] = glider.category
+            }.value
+        }
+    }
+
+    fun findExistingFlightUrls(rssUrls: Set<String>): Set<String> {
+        return transaction {
+            DbFlight.select { DbFlight.url.inList(rssUrls) }
                 .map { it[DbFlight.url] }
                 .toSet()
         }
+    }
 
-        for (flight in flights) {
-            // skip URLs that are already in the database
-            if (flight.url in existingUrls) {
-                continue
-            }
+    fun findPilot(username: String): Pilot? {
+        return transaction {
+            DbPilot.select { DbPilot.username.eq(username) }
+                .limit(n = 1)
+                .map {
+                    Pilot(
+                        id = it[DbPilot.id].value,
+                        name = it[DbPilot.name],
+                        username = it[DbPilot.username]
+                    )
+                }.firstOrNull()
+        }
+    }
 
-            transaction {
-                DbFlight.insert {
-                    it[title] = flight.title
-                    it[distanceKm] = flight.distanceKm
-                    it[type] = flight.type
-                    it[pilotName] = flight.pilotName
-                    it[pilotUsername] = flight.pilotUsername
-                    it[url] = flight.url
-                    it[flightDate] = DateTime(flight.flightDate)
-                }
-            }
+    fun findGlider(name: String): Glider? {
+        return transaction {
+            DbGlider.select { DbGlider.name.eq(name) }
+                .limit(n = 1)
+                .map {
+                    Glider(
+                        id = it[DbGlider.id].value,
+                        name = it[DbGlider.name],
+                        category = it[DbGlider.category]
+                    )
+                }.firstOrNull()
+        }
+    }
+
+    fun findTakeoff(name: String?): Takeoff? {
+        name ?: return null
+
+        return transaction {
+            DbTakeoff.select { DbTakeoff.name.eq(name) }
+                .limit(n = 1)
+                .map {
+                    Takeoff(
+                        id = it[DbTakeoff.id].value,
+                        name = it[DbTakeoff.name],
+                        centroid = it[DbTakeoff.centroid]
+                    )
+                }.firstOrNull()
         }
     }
 }
