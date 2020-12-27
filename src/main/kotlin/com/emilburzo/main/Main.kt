@@ -8,6 +8,6 @@ fun main() {
     Xcontest2Db(
         db = Db(),
         http = Http(),
-    ).run()
+    ).fetchRecent()
 }
 

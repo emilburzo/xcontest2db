@@ -9,6 +9,9 @@ import kotlinx.coroutines.runBlocking
 
 class Http {
 
+    /**
+     * slower, but handles javascript by using headless chrome
+     */
     fun getJsContent(url: String): String {
         return runBlocking {
             HttpClient() {
@@ -23,6 +26,9 @@ class Http {
         }
     }
 
+    /**
+     * fastest, simple http get, no javascript support
+     */
     fun getContent(url: String): String {
         return runBlocking {
             HttpClient().use { client ->

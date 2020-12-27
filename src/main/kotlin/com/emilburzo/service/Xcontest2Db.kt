@@ -12,7 +12,7 @@ class Xcontest2Db(
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
-    fun run() {
+    fun fetchRecent() {
         val recentFlights = getRecentFlights(FLIGHTS_RECENT_URL)
         logger.info("found ${recentFlights.size} recent flights")
 
