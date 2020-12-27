@@ -4,6 +4,6 @@ set -eux
 
 NAME="xcontest2db"
 
-../gradlew build
+./gradlew build
 
 docker build -t ${NAME} .
