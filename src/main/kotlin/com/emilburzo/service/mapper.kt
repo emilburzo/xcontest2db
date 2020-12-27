@@ -30,6 +30,8 @@ fun mapFlight(element: Element): Flight {
     i++ // skip quickview link
     val url = mapUrl(element.child(i++).child(0))
 
+    require(url.length > 20)
+
     return Flight(
         id = null,
         pilot = pilot,
@@ -46,7 +48,7 @@ fun mapFlight(element: Element): Flight {
 }
 
 fun mapUrl(element: Element): String {
-    val a = element.child(0)
+    val a = element.selectFirst(".detail")
     return a.attr("href")
 }
 
