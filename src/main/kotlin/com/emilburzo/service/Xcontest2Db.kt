@@ -14,17 +14,21 @@ class Xcontest2Db(
 
     fun run() {
         val recentFlights = getRecentFlights(FLIGHTS_RECENT_URL)
+        logger.info("found ${recentFlights.size} recent flights")
 
         // fetch the ones we already know
         val existingFlightUrls = getExistingFlightUrls(recentFlights)
+        logger.info("found ${existingFlightUrls.size} existing urls")
 
         // excluding those we already know about
         val flights = recentFlights.filterNot { it.url in existingFlightUrls }
+        logger.info("found ${flights.size} new flights")
 
         // persist
         flights.forEach {
             persist(it)
         }
+        logger.info("persisted ${flights.size} flights")
     }
 
     private fun getRecentFlights(url: String): List<Flight> {
