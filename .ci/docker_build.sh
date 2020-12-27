@@ -4,6 +4,6 @@ set -eux
 
 NAME="xcontest2db"
 
-mvn clean package
+./gradlew build
 
 docker build -t ${NAME} .

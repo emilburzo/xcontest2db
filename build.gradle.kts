@@ -51,11 +51,11 @@ tasks {
         archiveBaseName.set("xcontest2db")
         mergeServiceFiles()
         manifest {
-            attributes(mapOf("Main-Class" to "MainKt"))
+            attributes(mapOf("Main-Class" to "com.emilburzo.main.MainKt"))
         }
     }
 }
 
 application {
-    mainClassName = "MainKt"
+    mainClassName = "com.emilburzo.main.MainKt"
 }
