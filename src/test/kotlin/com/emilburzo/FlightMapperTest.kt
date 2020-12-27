@@ -1,6 +1,7 @@
 package com.emilburzo
 
 import com.emilburzo.service.mapFlights
+import org.jsoup.Jsoup
 import org.junit.Test
 import org.postgis.Point
 import kotlin.test.assertEquals
@@ -9,8 +10,8 @@ class FlightMapperTest {
 
     @Test
     fun testFlightsList() {
-        val html = getResourceAsText("/flights_list/recent_flights.html")
-        val flights = mapFlights(html)
+        val document = Jsoup.parse(getResourceAsText("/flights_list/recent_flights.html"))
+        val flights = mapFlights(document)
 
         assertEquals(flights.size, 100)
 
@@ -54,6 +55,13 @@ class FlightMapperTest {
         assertEquals("D", third.glider.category)
     }
 
+    @Test
+    fun testFlightsListWithUtc() {
+        val document = Jsoup.parse(getResourceAsText("/flights_list/with_utc.html"))
+        val flights = mapFlights(document)
+
+        assertEquals(flights.size, 100)
+    }
 }
 
 fun getResourceAsText(path: String): String {
