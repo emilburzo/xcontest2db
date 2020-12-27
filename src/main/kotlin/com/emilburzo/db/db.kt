@@ -36,7 +36,9 @@ class Db(
         transaction {
             DbFlight.insert {
                 it[pilot] = EntityID(pilotId, DbPilot)
-                it[takeoff] = EntityID(takeoffId!!, DbTakeoff)
+                if (takeoffId != null) {
+                    it[takeoff] = EntityID(takeoffId, DbTakeoff)
+                }
                 it[startTime] = DateTime(flight.startTime)
                 it[startPoint] = flight.startPoint
                 it[type] = flight.type
