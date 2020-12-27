@@ -78,7 +78,7 @@ class Db(
         }
     }
 
-    fun findExistingUrls(rssUrls: Set<String>): Set<String> {
+    fun findExistingFlightUrls(rssUrls: Set<String>): Set<String> {
         return transaction {
             DbFlight.select { DbFlight.url.inList(rssUrls) }
                 .map { it[DbFlight.url] }

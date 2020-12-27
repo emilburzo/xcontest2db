@@ -34,14 +34,3 @@ data class Flight(
     val glider: Glider,
     val url: String,
 )
-
-// data available in the RSS feed
-data class RssFlight(
-    val title: String,
-    val distanceKm: Double,
-    val type: String,
-    val pilotName: String,
-    val pilotUsername: String,
-    val url: String,
-    val flightDate: Date
-)

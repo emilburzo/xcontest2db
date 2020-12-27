@@ -2,41 +2,39 @@ package com.emilburzo.service
 
 import com.emilburzo.db.Db
 import com.emilburzo.service.http.Http
-import com.emilburzo.service.rss.Rss
 import org.slf4j.LoggerFactory
 
 
 class Xcontest2Db(
     private val db: Db,
     private val http: Http,
-    private val rss: Rss
 ) {
 
     private val logger = LoggerFactory.getLogger(javaClass)
 
     fun run() {
-//        // get latest from RSS feed
-//        val rssFlights = getRssFlights(FLIGHTS_RSS_URL)
-
         val recentFlights = getRecentFlights(FLIGHTS_RECENT_URL)
 
-//        // fetch the ones we already know
-//        val existingRssFlightUrls = getExistingRssFlightUrls(rssFlights)
-//
-//        // fetch info missing in the RSS feed, excluding those we already know about
-//        val flights = rssFlights.filterNot { it.url in existingRssFlightUrls }
-//
-//        // persist
-//        flights.forEach {
-//            val flight = mapRssFlightToFlight(it)
-//
-//            persist(flight)
-//        }
+        // fetch the ones we already know
+        val existingFlightUrls = getExistingFlightUrls(recentFlights)
+
+        // excluding those we already know about
+        val flights = recentFlights.filterNot { it.url in existingFlightUrls }
+
+        // persist
+        flights.forEach {
+            persist(it)
+        }
     }
 
     private fun getRecentFlights(url: String): List<Flight> {
         val flightsListHtml = http.getJsContent(url)
         return mapFlights(flightsListHtml)
+    }
+
+    private fun getExistingFlightUrls(flights: List<Flight>): Set<String> {
+        val flightUrls = flights.map { it.url }.toSet()
+        return db.findExistingFlightUrls(flightUrls)
     }
 
     private fun persist(flight: Flight) {
@@ -80,21 +78,6 @@ class Xcontest2Db(
             return db.id!!
         }
         return this.db.persist(pilot)
-    }
-
-    private fun getExistingRssFlightUrls(rssFlights: List<RssFlight>): Set<String> {
-        val rssUrls = rssFlights.map { it.url }.toSet()
-        return db.findExistingUrls(rssUrls)
-    }
-
-    private fun mapRssFlightToFlight(rssFlight: RssFlight): Flight {
-        val flightDetailHtml = http.getJsContent(rssFlight.url)
-        return mapFlightDetail(html = flightDetailHtml, rssFlight = rssFlight)
-    }
-
-    private fun getRssFlights(rssUrl: String): List<RssFlight> {
-        val content = http.getContent(rssUrl)
-        return rss.getFlights(content)
     }
 
 }

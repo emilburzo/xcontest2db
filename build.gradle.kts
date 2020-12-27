@@ -25,7 +25,6 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-dao:${kotlin_exposed_version}")
     implementation("org.jetbrains.exposed:exposed-jdbc:${kotlin_exposed_version}")
     implementation("org.jetbrains.exposed:exposed-jodatime:${kotlin_exposed_version}")
-    implementation("com.rometools:rome:1.12.2")
     implementation("org.postgresql:postgresql:42.2.8")
     implementation("org.jsoup:jsoup:1.12.1")
     implementation("org.slf4j:slf4j-api:1.7.25")
