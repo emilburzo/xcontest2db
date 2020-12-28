@@ -53,7 +53,7 @@ class Xcontest2Db(
 
                 processFlights(flightsListDocPaged)
 
-                Thread.sleep(60 * 1000)
+                Thread.sleep(60 * 1000) // be nice to all services involved
             }
         }
     }
