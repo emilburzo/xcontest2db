@@ -1,6 +1,7 @@
 package com.emilburzo.service.http
 
 import io.ktor.client.*
+import io.ktor.client.engine.cio.*
 import io.ktor.client.features.json.*
 import io.ktor.client.request.*
 import io.ktor.http.*
@@ -14,7 +15,8 @@ class Http {
      */
     fun getJsContent(url: String): String {
         return runBlocking {
-            HttpClient() {
+            HttpClient(CIO) {
+                engine { requestTimeout = 60 * 1000 }
                 install(JsonFeature)
             }.use { client ->
                 client.post<String> {
