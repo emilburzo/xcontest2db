@@ -1,6 +1,7 @@
 package com.emilburzo.db
 
 import org.jetbrains.exposed.dao.id.LongIdTable
+import org.jetbrains.exposed.sql.Table
 import org.jetbrains.exposed.sql.jodatime.datetime
 
 
@@ -22,8 +23,9 @@ object DbTakeoff : LongIdTable(name = "takeoffs") {
     val centroidIndex = index(columns = arrayOf(centroid), indexType = "GIST")
 }
 
-object DbFlight : LongIdTable(name = "flights") {
+object DbFlight : Table(name = "flights") {
     // columns
+    val id = long(name = "id")
     val pilot = reference(name = "pilot_id", refColumn = DbPilot.id)
     val takeoff = reference(name = "takeoff_id", refColumn = DbTakeoff.id).nullable()
     val startTime = datetime(name = "start_time").index() // https://github.com/JetBrains/Exposed/issues/221
@@ -37,4 +39,7 @@ object DbFlight : LongIdTable(name = "flights") {
 
     // custom indexes
     val startPointIndex = index(columns = arrayOf(startPoint), indexType = "GIST")
+
+    // pk
+    override val primaryKey = PrimaryKey(id)
 }
