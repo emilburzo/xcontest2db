@@ -65,6 +65,14 @@ class FlightMapperTest {
 
         assertEquals(flights.size, 100)
     }
+
+    @Test
+    fun testFlightsListNpe() {
+        val document = Jsoup.parse(getResourceAsText("/flights_list/npe.html"))
+        val flights = mapFlights(document)
+
+        assertEquals(flights.size, 0)
+    }
 }
 
 fun getResourceAsText(path: String): String {

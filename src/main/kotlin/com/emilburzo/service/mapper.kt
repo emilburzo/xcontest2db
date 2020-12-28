@@ -10,8 +10,8 @@ import java.time.format.DateTimeFormatter
 import java.util.*
 
 fun mapFlights(flightsListDoc: Document): List<Flight> {
-    return flightsListDoc.selectFirst("#flights > table > tbody")
-        .select("tr")
+    val flightsTable = flightsListDoc.selectFirst("#flights > table > tbody") ?: return emptyList()
+    return flightsTable.select("tr")
         .map { mapFlight(it) }
 }
 
