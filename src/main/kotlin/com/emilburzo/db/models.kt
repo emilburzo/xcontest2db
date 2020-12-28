@@ -35,7 +35,7 @@ object DbFlight : Table(name = "flights") {
     val score = double(name = "score")
     val airtime = integer(name = "airtime") // minutes
     val glider = reference(name = "glider_id", refColumn = DbGlider.id)
-    val url = varchar(name = "url", length = 512).uniqueIndex()
+    val url = varchar(name = "url", length = 512)
 
     // custom indexes
     val startPointIndex = index(columns = arrayOf(startPoint), indexType = "GIST")
