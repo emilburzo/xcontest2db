@@ -6,7 +6,7 @@ import org.jetbrains.exposed.sql.jodatime.datetime
 
 
 object DbPilot : LongIdTable(name = "pilots") {
-    val name = varchar(name = "name", length = 200).uniqueIndex()
+    val name = varchar(name = "name", length = 200)
     val username = varchar(name = "username", length = 100).uniqueIndex()
 }
 
