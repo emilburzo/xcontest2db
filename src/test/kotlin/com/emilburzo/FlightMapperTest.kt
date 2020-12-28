@@ -16,6 +16,7 @@ class FlightMapperTest {
         assertEquals(flights.size, 100)
 
         val first = flights[0]
+        assertEquals(2343989, first.id)
         assertEquals("Daniel Filip", first.pilot.name)
         assertEquals("Danielfilip", first.pilot.username)
         assertEquals(1609074780000, first.startTime.time)
@@ -29,6 +30,7 @@ class FlightMapperTest {
         assertEquals("B", first.glider.category)
 
         val second = flights[1]
+        assertEquals(2343991, second.id)
         assertEquals("sergiu bal", second.pilot.name)
         assertEquals("sergiulica_2", second.pilot.username)
         assertEquals(1609074720000, second.startTime.time)
@@ -42,6 +44,7 @@ class FlightMapperTest {
         assertEquals("B", second.glider.category)
 
         val third = flights[2]
+        assertEquals(2342226, third.id)
         assertEquals("Gabriel-Alexandru Ivan", third.pilot.name)
         assertEquals("grindboyrol", third.pilot.username)
         assertEquals(1608810660000, third.startTime.time)

@@ -5,9 +5,8 @@ import com.emilburzo.service.Xcontest2Db
 import com.emilburzo.service.http.Http
 
 fun main() {
-    Xcontest2Db(
-        db = Db(),
-        http = Http(),
-    ).fetchRecent()
+    // todo add option to choose mode
+    Xcontest2Db(db = Db(), http = Http()).fetchRecent()
+//    Xcontest2Db(db = Db(), http = Http()).fetchAll()
 }
 

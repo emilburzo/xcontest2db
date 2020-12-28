@@ -35,6 +35,7 @@ class Db(
     fun persist(flight: Flight, pilotId: Long, takeoffId: Long?, gliderId: Long) {
         transaction {
             DbFlight.insert {
+                it[id] = flight.id
                 it[pilot] = EntityID(pilotId, DbPilot)
                 if (takeoffId != null) {
                     it[takeoff] = EntityID(takeoffId, DbTakeoff)

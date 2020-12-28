@@ -22,7 +22,7 @@ data class Glider(
 )
 
 data class Flight(
-    val id: Long?,
+    val id: Long,
     val pilot: Pilot,
     val takeoff: Takeoff?,
     val startTime: Date,

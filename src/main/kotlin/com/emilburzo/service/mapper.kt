@@ -1,6 +1,6 @@
 package com.emilburzo.service
 
-import org.jsoup.Jsoup
+import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import org.postgis.Point
 import java.net.URL
@@ -9,16 +9,15 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-fun mapFlights(html: String): List<Flight> {
-    val flightsList = Jsoup.parse(html)
-
-    return flightsList.selectFirst("#flights > table > tbody")
+fun mapFlights(flightsListDoc: Document): List<Flight> {
+    return flightsListDoc.selectFirst("#flights > table > tbody")
         .select("tr")
         .map { mapFlight(it) }
 }
 
 fun mapFlight(element: Element): Flight {
-    var i = 1
+    var i = 0
+    val flightId = mapFlightId(element.child(i++))
     val startTime = mapStartTime(element.child(i++).child(0))
     val pilot = mapPilot(element.child(i++).child(0))
     val takeoff = mapTakeoff(element.child(i++).child(0))
@@ -30,10 +29,11 @@ fun mapFlight(element: Element): Flight {
     i++ // skip quickview link
     val url = mapUrl(element.child(i++).child(0))
 
+    require(flightId > 0)
     require(url.length > 20)
 
     return Flight(
-        id = null,
+        id = flightId,
         pilot = pilot,
         startTime = startTime,
         startPoint = takeoff.centroid,
@@ -45,6 +45,10 @@ fun mapFlight(element: Element): Flight {
         glider = glider,
         url = url,
     )
+}
+
+fun mapFlightId(element: Element): Long {
+    return element.attr("title").split(":").last().toLong()
 }
 
 fun mapUrl(element: Element): String {
@@ -113,7 +117,9 @@ fun mapPilot(element: Element): Pilot {
 }
 
 fun mapStartTime(element: Element): Date {
-    val datetime = element.text().split("=")[0]
+    val date = element.ownText()
+    val time = element.child(0).text()
+    val datetime = "$date $time"
     val flightDate = LocalDateTime.parse(datetime, DateTimeFormatter.ofPattern("d.MM.yy HH:mm"))
     return Date.from(flightDate.atZone(ZoneId.of("Europe/Bucharest")).toInstant()) // todo env
 }
