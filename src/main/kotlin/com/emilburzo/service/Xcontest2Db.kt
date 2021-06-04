@@ -99,6 +99,8 @@ class Xcontest2Db(
         val takeoffId = getOrCreate(flight.takeoff)
         val gliderId = getOrCreate(flight.glider)
 
+        log.info("trying to persist flight: $flight, pilotId: $pilotId, takeoffId: $takeoffId, gliderId: $gliderId")
+
         db.persist(
             flight = flight,
             pilotId = pilotId,
