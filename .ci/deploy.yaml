@@ -1,0 +1,34 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: xcontest2db
+spec:
+  schedule: "*/15 * * * *"
+  concurrencyPolicy: Forbid
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+            - name: xcontest2db
+              image: emilburzo/xcontest2db:latest
+              env:
+                - name: DB_HOST
+                  valueFrom:
+                    secretKeyRef:
+                      name: xcontest2db.db
+                      key: host
+                      optional: false
+                - name: DB_USER
+                  valueFrom:
+                    secretKeyRef:
+                      name: xcontest2db.db
+                      key: username
+                      optional: false
+                - name: DB_PASS
+                  valueFrom:
+                    secretKeyRef:
+                      name: xcontest2db.db
+                      key: password
+                      optional: false
+          restartPolicy: Never
