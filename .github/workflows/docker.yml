@@ -16,7 +16,7 @@ jobs:
           java-version: '11'
           distribution: 'adopt'
       - name: Build with Gradle
-        run: ./gradlew build
+        run: ./gradlew build --no-daemon
       - name: Set up QEMU
         uses: docker/setup-qemu-action@v1
       - name: Set up Docker Buildx
