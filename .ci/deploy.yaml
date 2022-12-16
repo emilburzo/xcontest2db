@@ -3,7 +3,7 @@ kind: CronJob
 metadata:
   name: xcontest2db
 spec:
-  schedule: "*/15 * * * *"
+  schedule: "*/19 * * * *"
   concurrencyPolicy: Forbid
   jobTemplate:
     spec:
