@@ -13,6 +13,7 @@ spec:
       activeDeadlineSeconds: 900
       ttlSecondsAfterFinished: 3600
       backoffLimit: 3
+      template:
         spec:
           restartPolicy: Never
           containers:
