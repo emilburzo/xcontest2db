@@ -5,13 +5,20 @@ metadata:
 spec:
   schedule: "*/19 * * * *"
   concurrencyPolicy: Forbid
+  activeDeadlineSeconds: 900
+  startingDeadlineSeconds: 120
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
   jobTemplate:
     spec:
-      template:
+      ttlSecondsAfterFinished: 3600
+      backoffLimit: 3
         spec:
+          restartPolicy: Never
           containers:
             - name: xcontest2db
               image: emilburzo/xcontest2db:latest
+              imagePullPolicy: Always
               env:
                 - name: DB_HOST
                   valueFrom:
@@ -31,4 +38,4 @@ spec:
                       name: xcontest2db.db
                       key: password
                       optional: false
-          restartPolicy: Never
+
