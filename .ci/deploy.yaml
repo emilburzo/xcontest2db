@@ -5,12 +5,12 @@ metadata:
 spec:
   schedule: "*/19 * * * *"
   concurrencyPolicy: Forbid
-  activeDeadlineSeconds: 900
   startingDeadlineSeconds: 120
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 2
   jobTemplate:
     spec:
+      activeDeadlineSeconds: 900
       ttlSecondsAfterFinished: 3600
       backoffLimit: 3
         spec:
