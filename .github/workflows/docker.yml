@@ -33,4 +33,4 @@ jobs:
           context: .
           platforms: linux/amd64,linux/arm64
           push: true
-          tags: emilburzo/xcontest2db:latest,emilburzo/xcontest2db:${{ github.run_number }},emilburzo/xcontest2db:latest,emilburzo/xcontest2db:${{ env.SHORT_SHA }}
+          tags: emilburzo/xcontest2db:latest,emilburzo/xcontest2db:${{ github.run_number }},emilburzo/xcontest2db:${{ env.SHORT_SHA }}
