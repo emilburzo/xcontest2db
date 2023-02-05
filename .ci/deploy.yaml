@@ -18,8 +18,8 @@ spec:
           restartPolicy: Never
           containers:
             - name: xcontest2db
-              image: emilburzo/xcontest2db:latest
-              imagePullPolicy: Always
+              image: emilburzo/xcontest2db:SHORT_SHA
+              imagePullPolicy: IfNotPresent
               env:
                 - name: DB_HOST
                   valueFrom:
