@@ -106,7 +106,7 @@ fun mapTakeoff(element: Element): Takeoff {
 }
 
 fun mapPilot(element: Element): Pilot {
-    val a = element.child(0)
+    val a = element.child(1)
     val url = a.attr("href")
     val name = a.child(0).text()
     return Pilot(
