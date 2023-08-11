@@ -75,11 +75,11 @@ class Xcontest2Db(
         log.info("parsed ${flightsAll.size} flights")
 
         // fetch the ones we already know
-        val existingFlightUrls = getExistingFlightUrls(flightsAll)
-        log.info("found ${existingFlightUrls.size} existing urls")
+        val existingFlightIds = getExistingFlightIds(flightsAll)
+        log.info("found ${existingFlightIds.size} existing flights")
 
         // excluding those we already know about
-        val flights = flightsAll.filterNot { it.url in existingFlightUrls }
+        val flights = flightsAll.filterNot { it.id in existingFlightIds }
         log.info("found ${flights.size} new flights")
 
         // persist
@@ -89,9 +89,9 @@ class Xcontest2Db(
         log.info("persisted ${flights.size} flights")
     }
 
-    private fun getExistingFlightUrls(flights: List<Flight>): Set<String> {
-        val flightUrls = flights.map { it.url }.toSet()
-        return db.findExistingFlightUrls(flightUrls)
+    private fun getExistingFlightIds(flights: List<Flight>): Set<Long> {
+        val flightIds = flights.map { it.id }.toSet()
+        return db.findExistingFlightIds(flightIds)
     }
 
     private fun persist(flight: Flight) {
