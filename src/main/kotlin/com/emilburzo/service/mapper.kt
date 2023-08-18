@@ -9,17 +9,17 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 
-fun mapFlights(flightsListDoc: Document): List<Flight> {
+fun mapFlights(flightsListDoc: Document, world: Boolean): List<Flight> {
     val flightsTable = flightsListDoc.selectFirst("#flights > table > tbody") ?: return emptyList()
     return flightsTable.select("tr")
-        .map { mapFlight(it) }
+        .map { mapFlight(it, world) }
 }
 
-fun mapFlight(element: Element): Flight {
+fun mapFlight(element: Element, world: Boolean): Flight {
     var i = 0
     val flightId = mapFlightId(element.child(i++))
     val startTime = mapStartTime(element.child(i++).child(0))
-    val pilot = mapPilot(element.child(i++).child(0))
+    val pilot = mapPilot(element.child(i++).child(0), world)
     val takeoff = mapTakeoff(element.child(i++).child(0))
     val type = mapFlightType(element.child(i++).child(0))
     val distanceKm = mapDistanceKm(element.child(i++).child(0))
@@ -105,8 +105,9 @@ fun mapTakeoff(element: Element): Takeoff {
     )
 }
 
-fun mapPilot(element: Element): Pilot {
-    val a = element.child(1)
+fun mapPilot(element: Element, world: Boolean): Pilot {
+    val index = if (world) { 1 } else { 0 }
+    val a = element.child(index)
     val url = a.attr("href")
     val name = a.child(0).text()
     return Pilot(

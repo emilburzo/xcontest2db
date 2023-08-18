@@ -9,9 +9,9 @@ import kotlin.test.assertEquals
 class FlightMapperTest {
 
     @Test
-    fun testFlightsList() {
-        val document = Jsoup.parse(getResourceAsText("/flights_list/recent_flights.html"))
-        val flights = mapFlights(document)
+    fun testFlightsListWorld() {
+        val document = Jsoup.parse(getResourceAsText("/flights_list/recent_flights_world.html"))
+        val flights = mapFlights(document, world = true)
 
         assertEquals(flights.size, 100)
 
@@ -57,11 +57,60 @@ class FlightMapperTest {
         assertEquals("OZONE Rush 4", third.glider.name)
         assertEquals("B", third.glider.category)
     }
+@Test
+    fun testFlightsListRomania() {
+        val document = Jsoup.parse(getResourceAsText("/flights_list/recent_flights_romania.html"))
+        val flights = mapFlights(document, world = false)
+
+        assertEquals(flights.size, 100)
+
+       val first = flights[0]
+        assertEquals(2343989, first.id)
+        assertEquals("Daniel Filip", first.pilot.name)
+        assertEquals("Danielfilip", first.pilot.username)
+        assertEquals(1609074780000, first.startTime.time)
+        assertEquals(Point(23.545543, 46.597977), first.startPoint)
+        assertEquals("Padureni", first.takeoff!!.name)
+        assertEquals("zbor liber", first.type)
+        assertEquals(3.94, first.distanceKm)
+        assertEquals(3.95, first.score)
+        assertEquals(48, first.airtime)
+        assertEquals("OZONE Rush 5", first.glider.name)
+        assertEquals("B", first.glider.category)
+
+        val second = flights[1]
+        assertEquals(2343991, second.id)
+        assertEquals("sergiu bal", second.pilot.name)
+        assertEquals("sergiulica_2", second.pilot.username)
+        assertEquals(1609074720000, second.startTime.time)
+        assertEquals(Point(23.544963, 46.59779), second.startPoint)
+        assertEquals("Padureni", second.takeoff!!.name)
+        assertEquals("zbor liber", second.type)
+        assertEquals(4.86, second.distanceKm)
+        assertEquals(4.86, second.score)
+        assertEquals(58, second.airtime)
+        assertEquals("OZONE Rush 4", second.glider.name)
+        assertEquals("B", second.glider.category)
+
+        val third = flights[2]
+        assertEquals(2342226, third.id)
+        assertEquals("Gabriel-Alexandru Ivan", third.pilot.name)
+        assertEquals("grindboyrol", third.pilot.username)
+        assertEquals(1608810660000, third.startTime.time)
+        assertEquals(Point(23.68482, 46.02835), third.startPoint)
+        assertEquals("Daia Română", third.takeoff!!.name)
+        assertEquals("triunghi plat", third.type)
+        assertEquals(1.89, third.distanceKm)
+        assertEquals(2.65, third.score)
+        assertEquals(98, third.airtime)
+        assertEquals("OZONE Zeolite GT", third.glider.name)
+        assertEquals("D", third.glider.category)
+    }
 
     @Test
     fun testFlightsListWithUtc() {
         val document = Jsoup.parse(getResourceAsText("/flights_list/with_utc.html"))
-        val flights = mapFlights(document)
+        val flights = mapFlights(document, world = true)
 
         assertEquals(flights.size, 100)
     }
@@ -69,7 +118,7 @@ class FlightMapperTest {
     @Test
     fun testFlightsListNpe() {
         val document = Jsoup.parse(getResourceAsText("/flights_list/npe.html"))
-        val flights = mapFlights(document)
+        val flights = mapFlights(document, world = false)
 
         assertEquals(flights.size, 0)
     }

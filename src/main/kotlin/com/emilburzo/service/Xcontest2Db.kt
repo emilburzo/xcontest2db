@@ -17,8 +17,8 @@ class Xcontest2Db(
     fun fetchRecent() {
         log.info("fetching recent flights")
 
-        val flightsListDoc = Jsoup.parse(http.getJsContent(FLIGHTS_RECENT_URL))
-        processFlights(flightsListDoc)
+        processFlights(flightsListDoc = Jsoup.parse(http.getJsContent(FLIGHTS_RECENT_URL_WORLD)), world = true)
+        processFlights(flightsListDoc = Jsoup.parse(http.getJsContent(FLIGHTS_RECENT_URL_ROMANIA)), world = false)
     }
 
     fun fetchAll() {
@@ -51,7 +51,7 @@ class Xcontest2Db(
 
                 val flightsListDocPaged = Jsoup.parse(http.getJsContent(urlPaged))
 
-                processFlights(flightsListDocPaged)
+                processFlights(flightsListDocPaged, world = false)
 
                 Thread.sleep(60 * 1000) // be nice to all services involved
             }
@@ -70,8 +70,8 @@ class Xcontest2Db(
         return null
     }
 
-    private fun processFlights(flightsListDoc: Document) {
-        val flightsAll = mapFlights(flightsListDoc)
+    private fun processFlights(flightsListDoc: Document, world: Boolean) {
+        val flightsAll = mapFlights(flightsListDoc, world)
         log.info("parsed ${flightsAll.size} flights")
 
         // fetch the ones we already know
