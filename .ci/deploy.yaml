@@ -39,4 +39,3 @@ spec:
                       name: xcontest2db.db
                       key: password
                       optional: false
-
