@@ -21,6 +21,8 @@ spec:
               image: emilburzo/xcontest2db:SHORT_SHA
               imagePullPolicy: IfNotPresent
               env:
+                - name: TZ
+                  value: "Europe/Bucharest"
                 - name: DB_HOST
                   valueFrom:
                     secretKeyRef:

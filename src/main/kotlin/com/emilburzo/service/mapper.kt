@@ -122,5 +122,5 @@ fun mapStartTime(element: Element): Date {
     val time = element.child(0).text()
     val datetime = "$date $time"
     val flightDate = LocalDateTime.parse(datetime, DateTimeFormatter.ofPattern("d.MM.yy HH:mm"))
-    return Date.from(flightDate.atZone(ZoneId.of("Europe/Bucharest")).toInstant()) // todo env
+    return Date.from(flightDate.atZone(ZoneId.of(TIMEZONE)).toInstant())
 }

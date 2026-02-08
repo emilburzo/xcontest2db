@@ -8,10 +8,17 @@ import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.joda.time.DateTime
+import com.emilburzo.service.TIMEZONE
+import org.joda.time.DateTimeZone
+import java.util.*
 
 /**
  * Created by emil on 07.12.2019.
  */
+fun toLocalDateTime(date: Date): DateTime {
+    return DateTime(date.time, DateTimeZone.forID(TIMEZONE))
+}
+
 class Db(
     host: String = System.getenv("DB_HOST"),
     port: String = System.getenv("DB_PORT") ?: "5432",
@@ -40,7 +47,7 @@ class Db(
                 if (takeoffId != null) {
                     it[takeoff] = EntityID(takeoffId, DbTakeoff)
                 }
-                it[startTime] = DateTime(flight.startTime)
+                it[startTime] = toLocalDateTime(flight.startTime)
                 it[startPoint] = flight.startPoint
                 it[type] = flight.type
                 it[distanceKm] = flight.distanceKm
