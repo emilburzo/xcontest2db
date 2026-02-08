@@ -26,20 +26,47 @@ class Xcontest2Db(
         // todo env
         val baseUrls = setOf(
             "https://www.xcontest.org/romania/zboruri/",
-            "https://www.xcontest.org/2011/romania/zboruri/",
-            "https://www.xcontest.org/2012/romania/zboruri/",
-            "https://www.xcontest.org/2013/romania/zboruri/",
-            "https://www.xcontest.org/2014/romania/zboruri/",
-            "https://www.xcontest.org/2015/romania/zboruri/",
-            "https://www.xcontest.org/2016/romania/zboruri/",
-            "https://www.xcontest.org/2017/romania/zboruri/",
-            "https://www.xcontest.org/2018/romania/zboruri/",
-            "https://www.xcontest.org/2019/romania/zboruri/",
+            "https://www.xcontest.org/2025/romania/zboruri/",
+            "https://www.xcontest.org/2024/romania/zboruri/",
+            "https://www.xcontest.org/2023/romania/zboruri/",
+            "https://www.xcontest.org/2022/romania/zboruri/",
+            "https://www.xcontest.org/2021/romania/zboruri/",
             "https://www.xcontest.org/2020/romania/zboruri/",
+            "https://www.xcontest.org/2019/romania/zboruri/",
+            "https://www.xcontest.org/2018/romania/zboruri/",
+            "https://www.xcontest.org/2017/romania/zboruri/",
+            "https://www.xcontest.org/2016/romania/zboruri/",
+            "https://www.xcontest.org/2015/romania/zboruri/",
+            "https://www.xcontest.org/2014/romania/zboruri/",
+            "https://www.xcontest.org/2013/romania/zboruri/",
+            "https://www.xcontest.org/2012/romania/zboruri/",
+            "https://www.xcontest.org/2011/romania/zboruri/",
+
+            "https://www.xcontest.org/2007/world/en/flights/",
+            "https://www.xcontest.org/2008/world/en/flights/",
+            "https://www.xcontest.org/2009/world/en/flights/",
+            "https://www.xcontest.org/2010/world/en/flights/",
+            "https://www.xcontest.org/2011/world/en/flights/",
+            "https://www.xcontest.org/2012/world/en/flights/",
+            "https://www.xcontest.org/2013/world/en/flights/",
+            "https://www.xcontest.org/2014/world/en/flights/",
+            "https://www.xcontest.org/2015/world/en/flights/",
+            "https://www.xcontest.org/2016/world/en/flights/",
+            "https://www.xcontest.org/2017/world/en/flights/",
+            "https://www.xcontest.org/2018/world/en/flights/",
+            "https://www.xcontest.org/2019/world/en/flights/",
+            "https://www.xcontest.org/2020/world/en/flights/",
+            "https://www.xcontest.org/2021/world/en/flights/",
+            "https://www.xcontest.org/2022/world/en/flights/",
+            "https://www.xcontest.org/2023/world/en/flights/",
+            "https://www.xcontest.org/2024/world/en/flights/",
+            "https://www.xcontest.org/2025/world/en/flights/",
+            "https://www.xcontest.org/world/en/flights//",
         )
 
         for (url in baseUrls) {
-            val lastPageOffset = getLastPageOffset(Jsoup.parse(http.getJsContent(url)))
+            val world = url.contains("/world/")
+            val lastPageOffset = getLastPageOffset(Jsoup.parse(http.getJsContent(url)), world)
             require(lastPageOffset != null)
             require(lastPageOffset > 0)
 
@@ -51,17 +78,18 @@ class Xcontest2Db(
 
                 val flightsListDocPaged = Jsoup.parse(http.getJsContent(urlPaged))
 
-                processFlights(flightsListDocPaged, world = false)
+                processFlights(flightsListDocPaged, world)
 
                 Thread.sleep(60 * 1000) // be nice to all services involved
             }
         }
     }
 
-    private fun getLastPageOffset(flightsListDoc: Document): Int? {
+    private fun getLastPageOffset(flightsListDoc: Document, world: Boolean): Int? {
+        val needle = if (world) "last page" else "ultima pagină"
         val pgEdges = flightsListDoc.select(".pg-edge")
         for (pgEdge in pgEdges) {
-            if (pgEdge.attr("title") == "ultima pagină") {
+            if (pgEdge.attr("title") == needle) {
                 val href = pgEdge.attr("href")
                 return href.split("=").lastOrNull()?.toInt()
             }
