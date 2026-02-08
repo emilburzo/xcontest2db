@@ -50,7 +50,7 @@ The app follows a three-layer pipeline: **HTTP fetch → HTML parse/map → DB p
 
 ## Tech Stack
 
-- Kotlin 1.4 / JVM 8, Gradle with Shadow plugin (fat JAR)
+- Kotlin 2.0 / JVM 21, Gradle with Shadow plugin (fat JAR)
 - Ktor Client (CIO engine) for HTTP
 - Jsoup for HTML parsing
 - Jetbrains Exposed (DSL) for database access

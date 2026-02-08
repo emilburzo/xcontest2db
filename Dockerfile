@@ -1,4 +1,4 @@
-FROM openjdk:8-jdk
+FROM eclipse-temurin:21-jre-alpine
 
 RUN mkdir /app
 

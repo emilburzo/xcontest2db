@@ -88,7 +88,7 @@ class Db(
 
     fun findExistingFlightIds(ids: Set<Long>): Set<Long> {
         return transaction {
-            DbFlight.select { DbFlight.id.inList(ids) }
+            DbFlight.selectAll().where { DbFlight.id.inList(ids) }
                 .map { it[DbFlight.id] }
                 .toSet()
         }
@@ -96,8 +96,8 @@ class Db(
 
     fun findPilot(username: String): Pilot? {
         return transaction {
-            DbPilot.select { DbPilot.username.eq(username) }
-                .limit(n = 1)
+            DbPilot.selectAll().where { DbPilot.username.eq(username) }
+                .limit(1)
                 .map {
                     Pilot(
                         id = it[DbPilot.id].value,
@@ -110,8 +110,8 @@ class Db(
 
     fun findGlider(name: String): Glider? {
         return transaction {
-            DbGlider.select { DbGlider.name.eq(name) }
-                .limit(n = 1)
+            DbGlider.selectAll().where { DbGlider.name.eq(name) }
+                .limit(1)
                 .map {
                     Glider(
                         id = it[DbGlider.id].value,
@@ -126,8 +126,8 @@ class Db(
         name ?: return null
 
         return transaction {
-            DbTakeoff.select { DbTakeoff.name.eq(name) }
-                .limit(n = 1)
+            DbTakeoff.selectAll().where { DbTakeoff.name.eq(name) }
+                .limit(1)
                 .map {
                     Takeoff(
                         id = it[DbTakeoff.id].value,

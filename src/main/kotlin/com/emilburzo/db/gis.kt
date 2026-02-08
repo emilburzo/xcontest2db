@@ -12,17 +12,14 @@ import org.postgis.Point
 
 fun Table.point(name: String): Column<Point> = registerColumn(name, PointColumnType())
 
-private class PointColumnType() : ColumnType() {
+private class PointColumnType : ColumnType<Point>() {
 
     override fun sqlType() = "GEOGRAPHY(Point)"
 
-    override fun valueFromDB(value: Any) = if (value is PGgeography) value.geometry else value
+    override fun valueFromDB(value: Any): Point = if (value is PGgeography) value.geometry as Point else value as Point
 
-    override fun notNullValueToDB(value: Any): Any {
-        if (value is Point) {
-            return PGgeography(value)
-        }
-        return value
+    override fun notNullValueToDB(value: Point): Any {
+        return PGgeography(value)
     }
 }
 

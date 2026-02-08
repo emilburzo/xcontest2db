@@ -1,9 +1,7 @@
-import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
-
 plugins {
-    kotlin("jvm") version "1.4.21"
+    kotlin("jvm") version "2.0.21"
     application
-    id("com.github.johnrengelman.shadow") version "6.1.0"
+    id("com.gradleup.shadow") version "8.3.5"
 }
 
 group = "com.emilburzo.xcontest2db"
@@ -13,36 +11,31 @@ repositories {
     mavenCentral()
 }
 
-val kotlin_exposed_version = "0.30.1"
-val ktor_version = "1.5.0"
+kotlin {
+    jvmToolchain(21)
+}
+
+val kotlin_exposed_version = "0.56.0"
+val ktor_version = "3.0.1"
 dependencies {
     testImplementation(kotlin("test-junit"))
     implementation("io.ktor:ktor-client-cio:${ktor_version}")
-    implementation("io.ktor:ktor-client-json:${ktor_version}")
-    implementation("io.ktor:ktor-client-jackson:${ktor_version}")
+    implementation("io.ktor:ktor-client-content-negotiation:${ktor_version}")
+    implementation("io.ktor:ktor-serialization-jackson:${ktor_version}")
     implementation("org.jetbrains.exposed:exposed-core:${kotlin_exposed_version}")
     implementation("org.jetbrains.exposed:exposed-dao:${kotlin_exposed_version}")
     implementation("org.jetbrains.exposed:exposed-jdbc:${kotlin_exposed_version}")
     implementation("org.jetbrains.exposed:exposed-jodatime:${kotlin_exposed_version}")
-    implementation("org.postgresql:postgresql:42.2.8")
-    implementation("org.jsoup:jsoup:1.12.1")
-    implementation("org.slf4j:slf4j-api:1.7.25")
-    implementation("ch.qos.logback:logback-classic:1.2.3")
-    implementation("ch.qos.logback:logback-core:1.2.3")
-    implementation("net.postgis:postgis-jdbc:2.5.0")
+    implementation("org.postgresql:postgresql:42.7.4")
+    implementation("org.jsoup:jsoup:1.18.1")
+    implementation("org.slf4j:slf4j-api:2.0.16")
+    implementation("ch.qos.logback:logback-classic:1.5.12")
+    implementation("ch.qos.logback:logback-core:1.5.12")
+    implementation("net.postgis:postgis-jdbc:2.5.1")
 }
 
 tasks.test {
     useJUnit()
-}
-
-tasks.withType<KotlinCompile>() {
-    kotlinOptions.jvmTarget = "1.8"
-}
-
-java {
-    sourceCompatibility = JavaVersion.VERSION_1_8
-    targetCompatibility = JavaVersion.VERSION_1_8
 }
 
 tasks {
@@ -56,5 +49,5 @@ tasks {
 }
 
 application {
-    mainClassName = "com.emilburzo.main.MainKt"
+    mainClass.set("com.emilburzo.main.MainKt")
 }

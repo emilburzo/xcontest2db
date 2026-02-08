@@ -2,9 +2,11 @@ package com.emilburzo.service.http
 
 import io.ktor.client.*
 import io.ktor.client.engine.cio.*
-import io.ktor.client.features.json.*
+import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.client.request.*
+import io.ktor.client.statement.*
 import io.ktor.http.*
+import io.ktor.serialization.jackson.*
 import kotlinx.coroutines.runBlocking
 
 
@@ -17,13 +19,12 @@ class Http {
         return runBlocking {
             HttpClient(CIO) {
                 engine { requestTimeout = 60 * 1000 }
-                install(JsonFeature)
+                install(ContentNegotiation) { jackson() }
             }.use { client ->
-                client.post<String> {
-                    url(BROWSERLESS_URL)
+                client.post(BROWSERLESS_URL) {
                     contentType(ContentType.Application.Json)
-                    body = BrowserlessContent(url)
-                }
+                    setBody(BrowserlessContent(url))
+                }.bodyAsText()
             }
         }
     }
@@ -34,7 +35,7 @@ class Http {
     fun getContent(url: String): String {
         return runBlocking {
             HttpClient().use { client ->
-                client.get(url)
+                client.get(url).bodyAsText()
             }
         }
     }
