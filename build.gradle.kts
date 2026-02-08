@@ -11,10 +11,9 @@ version = "1.0-SNAPSHOT"
 
 repositories {
     mavenCentral()
-    jcenter()
 }
 
-val kotlin_exposed_version = "0.28.1"
+val kotlin_exposed_version = "0.30.1"
 val ktor_version = "1.5.0"
 dependencies {
     testImplementation(kotlin("test-junit"))
