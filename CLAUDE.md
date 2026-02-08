@@ -48,6 +48,17 @@ The app follows a three-layer pipeline: **HTTP fetch → HTML parse/map → DB p
 | `DB_NAME` | No | `xcontest` | PostgreSQL database name |
 | `TZ` | No | `Europe/Bucharest` | Timezone for flight time parsing |
 
+## Build & Deploy
+
+**CI/CD:** GitHub Actions (`.github/workflows/docker.yml`) triggers on push to `master`:
+1. Builds with Gradle (`./gradlew build`) using JDK 21
+2. Builds a multi-arch Docker image (`linux/amd64`, `linux/arm64`) via Buildx
+3. Pushes to DockerHub as `emilburzo/xcontest2db` with tags: `latest`, run number, and short SHA
+
+**Docker image:** `eclipse-temurin:21-jre-alpine` base, runs the fat JAR (`./gradlew shadowJar`).
+
+**Deployment:** Runs as a Kubernetes CronJob. DockerHub credentials are stored as GitHub Actions secrets (`DOCKERHUB_USERNAME`, `DOCKERHUB_TOKEN`).
+
 ## Tech Stack
 
 - Kotlin 2.0 / JVM 21, Gradle with Shadow plugin (fat JAR)
