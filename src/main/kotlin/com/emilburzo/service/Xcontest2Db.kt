@@ -66,14 +66,21 @@ class Xcontest2Db(
 
         for (url in baseUrls) {
             val world = url.contains("/world/")
-            val lastPageOffset = getLastPageOffset(Jsoup.parse(http.getJsContent(url)), world)
+
+            // For world URLs, filter by country RO to only get Romanian flights
+            val initialUrl = if (world) "$url#flights[sort]=reg@filter[country]=RO" else url
+            val lastPageOffset = getLastPageOffset(Jsoup.parse(http.getJsContent(initialUrl)), world)
             require(lastPageOffset != null)
             require(lastPageOffset > 0)
 
             log.info("found last page offset: $lastPageOffset")
 
             for (offset in 0..lastPageOffset step 100) {
-                val urlPaged = "$url#flights[start]=$offset"
+                val urlPaged = if (world) {
+                    "$url#flights[sort]=reg@filter[country]=RO@flights[start]=$offset"
+                } else {
+                    "$url#flights[start]=$offset"
+                }
                 log.info("processing: $urlPaged")
 
                 val flightsListDocPaged = Jsoup.parse(http.getJsContent(urlPaged))
