@@ -119,7 +119,36 @@ docker run -d -p 3000:3000 playwright-content \
 
 ### The `fetchAll()` flow
 
-`Xcontest2Db.fetchAll()` iterates over base URLs for each year/league (Romania + World), finds the last page offset via `.pg-edge` links, then loops through all pages at `step 100`. Each page URL is `"$baseUrl#flights[start]=$offset"`. The HTML is parsed by `mapFlights()` using Jsoup, and new flights are deduplicated and persisted.
+`Xcontest2Db.fetchAll()` uses a **two-level loop** (dates × pages) to bypass the 1000-item pagination cap:
+
+1. For each base URL (year/league), loads the overview page
+2. Extracts available dates from the date filter `<select>` dropdown (option values in `YYYY-MM-DD` format)
+3. For each date, constructs a date-filtered URL and loads the first page
+4. Gets `lastPageOffset` from `.pg-edge` links (`null` → 0 for single-page results)
+5. Processes the first page, then paginates remaining pages at `step 100`
+
+**URL construction patterns:**
+- Romania per-date: `$url#filter[date]=$date`
+- Romania per-date paged: `$url#filter[date]=$date@flights[start]=$offset`
+- World per-date: `$url#flights[sort]=reg@filter[country]=RO@filter[date]=$date`
+- World per-date paged: `$url#flights[sort]=reg@filter[country]=RO@filter[date]=$date@flights[start]=$offset`
+
+**Why date splitting is needed:** xcontest.org enforces a client-side `maxItems: 1000` limit. With 100 flights per page, max offset is 900 (10 pages). Years/leagues with >1000 flights silently lose data without date splitting.
+
+### Date filter details
+
+- Hash parameter format: `filter[date]=YYYY-MM-DD` (e.g., `filter[date]=2025-09-30`)
+- The date dropdown is a `<select>` element rendered by JS in the filter form, with `<option value="YYYY-MM-DD">` entries
+- `extractAvailableDates()` finds the first `<select>` whose options match the `\d{4}-\d{2}-\d{2}` pattern
+- The `@` character separates multiple hash parameters (not `&`)
+
+### Playwright content service: date filter handling
+
+For date-filter hashes (no `start]` offset), the service:
+1. Captures table row count before setting the hash
+2. Sets `window.location.hash` to the date-filtered hash
+3. Waits for the table row count to change (confirms filtered data has rendered)
+4. Applies 2s settle time for final DOM updates
 
 ## Tech Stack
 
