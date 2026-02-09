@@ -5,8 +5,13 @@ import com.emilburzo.service.Xcontest2Db
 import com.emilburzo.service.http.Http
 
 fun main() {
-    // todo add option to choose mode
-    Xcontest2Db(db = Db(), http = Http()).fetchRecent()
-//    Xcontest2Db(db = Db(), http = Http()).fetchAll()
+    val mode = System.getenv("FETCH_MODE") ?: "recent"
+    val xcontest = Xcontest2Db(db = Db(), http = Http())
+
+    when (mode) {
+        "all" -> xcontest.fetchAll()
+        "recent" -> xcontest.fetchRecent()
+        else -> error("Unknown FETCH_MODE: $mode (expected 'recent' or 'all')")
+    }
 }
 
