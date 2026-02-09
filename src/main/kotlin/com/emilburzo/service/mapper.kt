@@ -2,7 +2,7 @@ package com.emilburzo.service
 
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
-import org.postgis.Point
+import net.postgis.jdbc.geometry.Point
 import java.net.URL
 import java.time.LocalDateTime
 import java.time.ZoneId

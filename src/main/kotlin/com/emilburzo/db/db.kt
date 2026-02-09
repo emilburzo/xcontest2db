@@ -88,7 +88,7 @@ class Db(
 
     fun findExistingFlightIds(ids: Set<Long>): Set<Long> {
         return transaction {
-            DbFlight.selectAll().where { DbFlight.id.inList(ids) }
+            DbFlight.select(DbFlight.id).where { DbFlight.id.inList(ids) }
                 .map { it[DbFlight.id] }
                 .toSet()
         }

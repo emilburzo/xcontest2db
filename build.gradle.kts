@@ -31,7 +31,7 @@ dependencies {
     implementation("org.slf4j:slf4j-api:2.0.16")
     implementation("ch.qos.logback:logback-classic:1.5.12")
     implementation("ch.qos.logback:logback-core:1.5.12")
-    implementation("net.postgis:postgis-jdbc:2.5.1")
+    implementation("net.postgis:postgis-jdbc:2025.1.1")
 }
 
 tasks.test {

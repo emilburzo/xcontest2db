@@ -4,7 +4,7 @@ import com.emilburzo.db.toLocalDateTime
 import com.emilburzo.service.mapFlights
 import org.jsoup.Jsoup
 import org.junit.Test
-import org.postgis.Point
+import net.postgis.jdbc.geometry.Point
 import java.util.*
 import kotlin.test.assertEquals
 

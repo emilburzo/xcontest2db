@@ -1,6 +1,6 @@
 package com.emilburzo.service
 
-import org.postgis.Point
+import net.postgis.jdbc.geometry.Point
 import java.util.*
 
 data class Pilot(

@@ -3,8 +3,8 @@ package com.emilburzo.db
 import org.jetbrains.exposed.sql.Column
 import org.jetbrains.exposed.sql.ColumnType
 import org.jetbrains.exposed.sql.Table
-import org.postgis.PGgeography
-import org.postgis.Point
+import net.postgis.jdbc.PGgeography
+import net.postgis.jdbc.geometry.Point
 
 /**
  * Created by emil on 25.12.2020.
