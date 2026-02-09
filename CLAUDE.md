@@ -158,3 +158,7 @@ For date-filter hashes (no `start]` offset), the service:
 - Jetbrains Exposed (DSL) for database access
 - PostgreSQL + PostGIS
 - Playwright content service (headed Chrome + Xvfb) for JS-rendered pages, replacing Browserless
+
+# Bugs
+
+When fixing a bug, always attempt to add a test case that first reproduces the easy, and only then fix it. Include HTML fixture where parsing is involved. Use a temporary/mock database when the database is involved.
