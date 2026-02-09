@@ -116,27 +116,8 @@ class Xcontest2Db(
         }
     }
 
-    /**
-     * Extract available dates from the date filter dropdown in the rendered HTML.
-     * The dropdown is a select element inside the filter form, with option values in YYYY-MM-DD format.
-     */
-    private fun extractAvailableDates(doc: Document): List<String> {
-        // The date filter is rendered as a <select> inside a filter form with options like:
-        // <option value="2025-09-30">30.09.25</option>
-        // Look for select elements whose options have date-like values
-        val datePattern = Regex("\\d{4}-\\d{2}-\\d{2}")
-        for (select in doc.select("select")) {
-            val options = select.select("option")
-            val dateValues = options.mapNotNull { option ->
-                val value = option.attr("value")
-                if (datePattern.matches(value)) value else null
-            }
-            if (dateValues.isNotEmpty()) {
-                return dateValues
-            }
-        }
-        return emptyList()
-    }
+    private fun extractAvailableDates(doc: Document): List<String> =
+        extractAvailableDatesFromDoc(doc)
 
     private fun getLastPageOffset(flightsListDoc: Document, world: Boolean): Int? {
         val needle = if (world) "last page" else "ultima pagină"
@@ -220,4 +201,27 @@ class Xcontest2Db(
         return this.db.persist(pilot)
     }
 
+}
+
+private val DATE_PATTERN = Regex("\\d{4}-\\d{2}-\\d{2}")
+
+/**
+ * Extract available dates from the date filter dropdown in the rendered HTML.
+ *
+ * The dropdown is a <select> inside the filter form. The value attribute
+ * may be a bare date ("2025-09-30") or include a flight count suffix
+ * ("2025-09-30 [10]"). We extract the YYYY-MM-DD portion in either case.
+ */
+fun extractAvailableDatesFromDoc(doc: Document): List<String> {
+    for (select in doc.select("select")) {
+        val options = select.select("option")
+        val dateValues = options.mapNotNull { option ->
+            val value = option.attr("value")
+            DATE_PATTERN.find(value)?.value
+        }
+        if (dateValues.isNotEmpty()) {
+            return dateValues
+        }
+    }
+    return emptyList()
 }

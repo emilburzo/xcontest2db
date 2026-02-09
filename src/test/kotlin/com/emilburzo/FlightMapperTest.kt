@@ -1,6 +1,7 @@
 package com.emilburzo
 
 import com.emilburzo.db.toLocalDateTime
+import com.emilburzo.service.extractAvailableDatesFromDoc
 import com.emilburzo.service.mapFlights
 import org.jsoup.Jsoup
 import org.junit.Test
@@ -162,6 +163,71 @@ class FlightMapperTest {
         val flights = mapFlights(document, world = false)
 
         assertEquals(flights.size, 0)
+    }
+
+    @Test
+    fun testExtractAvailableDatesBareDates() {
+        val html = """
+            <html><body>
+            <select>
+                <option value="2025-09-30">30.09.25</option>
+                <option value="2025-09-29">29.09.25</option>
+                <option value="2025-09-28">28.09.25</option>
+            </select>
+            </body></html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        val dates = extractAvailableDatesFromDoc(doc)
+        assertEquals(listOf("2025-09-30", "2025-09-29", "2025-09-28"), dates)
+    }
+
+    @Test
+    fun testExtractAvailableDatesWithFlightCount() {
+        val html = """
+            <html><body>
+            <select>
+                <option value="2025-09-30">30.09.25 [10]</option>
+                <option value="2025-09-29">29.09.25 [5]</option>
+                <option value="2025-09-28">28.09.25 [23]</option>
+            </select>
+            </body></html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        val dates = extractAvailableDatesFromDoc(doc)
+        assertEquals(listOf("2025-09-30", "2025-09-29", "2025-09-28"), dates)
+    }
+
+    @Test
+    fun testExtractAvailableDatesSkipsNonDateSelects() {
+        val html = """
+            <html><body>
+            <select>
+                <option value="/2025/romania/zboruri/">Romania XC 2025</option>
+                <option value="/2024/romania/zboruri/">Romania XC 2024</option>
+            </select>
+            <select>
+                <option value="2025-09-30">30.09.25 [10]</option>
+                <option value="2025-09-29">29.09.25</option>
+            </select>
+            </body></html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        val dates = extractAvailableDatesFromDoc(doc)
+        assertEquals(listOf("2025-09-30", "2025-09-29"), dates)
+    }
+
+    @Test
+    fun testExtractAvailableDatesEmpty() {
+        val html = """
+            <html><body>
+            <select>
+                <option value="/2025/romania/zboruri/">Romania XC 2025</option>
+            </select>
+            </body></html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        val dates = extractAvailableDatesFromDoc(doc)
+        assertEquals(emptyList(), dates)
     }
 }
 
