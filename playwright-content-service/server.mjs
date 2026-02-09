@@ -2,6 +2,7 @@ import http from 'http';
 import { chromium } from 'playwright';
 
 const PORT = process.env.PORT || 3000;
+const HOST = process.env.HOST || '0.0.0.0';
 
 const server = http.createServer(async (req, res) => {
   if (req.method !== 'POST' || !req.url.startsWith('/content')) {
@@ -134,4 +135,4 @@ const server = http.createServer(async (req, res) => {
   }
 });
 
-server.listen(PORT, () => console.log(`Playwright content service listening on port ${PORT}`));
+server.listen(PORT, HOST, () => console.log(`Playwright content service listening on port ${PORT}`));
