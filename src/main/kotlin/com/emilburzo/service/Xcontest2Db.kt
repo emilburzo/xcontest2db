@@ -67,51 +67,73 @@ class Xcontest2Db(
         for (url in baseUrls) {
             val world = url.contains("/world/")
 
-            // Load the overview page to extract available dates
+            // Load the overview page first to check total flight count
             val initialUrl = if (world) "$url#flights[sort]=reg@filter[country]=RO" else url
             val overviewDoc = Jsoup.parse(http.getJsContent(initialUrl))
-            val dates = extractAvailableDates(overviewDoc)
-            log.info("found ${dates.size} dates for $url")
+            val overviewLastPageOffset = getLastPageOffset(overviewDoc, world) ?: 0
 
-            if (dates.isEmpty()) {
-                log.warn("no dates found for $url, skipping")
-                continue
-            }
+            log.info("$url: overview last page offset = $overviewLastPageOffset")
 
-            for (date in dates) {
-                // Load first page for this date
-                val dateUrl = if (world) {
-                    "$url#flights[sort]=reg@filter[country]=RO@filter[date]=$date"
-                } else {
-                    "$url#filter[date]=$date"
-                }
-                log.info("processing date: $date for $url")
+            if (overviewLastPageOffset < 900) {
+                // Under the 1000-item cap — paginate directly without date splitting
+                log.info("$url: under 1000-item cap, paginating directly")
+                processFlights(overviewDoc, world)
 
-                val firstPageDoc = Jsoup.parse(http.getJsContent(dateUrl))
-                val lastPageOffset = getLastPageOffset(firstPageDoc, world) ?: 0
-
-                log.info("date $date: last page offset = $lastPageOffset")
-
-                // Process first page (already loaded)
-                processFlights(firstPageDoc, world)
-
-                // Paginate remaining pages if any
-                for (offset in 100..lastPageOffset step 100) {
+                for (offset in 100..overviewLastPageOffset step 100) {
                     val urlPaged = if (world) {
-                        "$url#flights[sort]=reg@filter[country]=RO@filter[date]=$date@flights[start]=$offset"
+                        "$url#flights[sort]=reg@filter[country]=RO@flights[start]=$offset"
                     } else {
-                        "$url#filter[date]=$date@flights[start]=$offset"
+                        "$url#flights[start]=$offset"
                     }
                     log.info("processing: $urlPaged")
 
                     val flightsListDocPaged = Jsoup.parse(http.getJsContent(urlPaged))
-
                     processFlights(flightsListDocPaged, world)
 
                     Thread.sleep(1000) // be nice to all services involved
                 }
+            } else {
+                // Hit the 1000-item cap — fall back to per-date splitting
+                log.info("$url: hit 1000-item cap, splitting by date")
+                val dates = extractAvailableDates(overviewDoc)
+                log.info("found ${dates.size} dates for $url")
 
-                Thread.sleep(1000) // be nice to all services involved
+                if (dates.isEmpty()) {
+                    log.warn("no dates found for $url, skipping")
+                    continue
+                }
+
+                for (date in dates) {
+                    val dateUrl = if (world) {
+                        "$url#flights[sort]=reg@filter[country]=RO@filter[date]=$date"
+                    } else {
+                        "$url#filter[date]=$date"
+                    }
+                    log.info("processing date: $date for $url")
+
+                    val firstPageDoc = Jsoup.parse(http.getJsContent(dateUrl))
+                    val lastPageOffset = getLastPageOffset(firstPageDoc, world) ?: 0
+
+                    log.info("date $date: last page offset = $lastPageOffset")
+
+                    processFlights(firstPageDoc, world)
+
+                    for (offset in 100..lastPageOffset step 100) {
+                        val urlPaged = if (world) {
+                            "$url#flights[sort]=reg@filter[country]=RO@filter[date]=$date@flights[start]=$offset"
+                        } else {
+                            "$url#filter[date]=$date@flights[start]=$offset"
+                        }
+                        log.info("processing: $urlPaged")
+
+                        val flightsListDocPaged = Jsoup.parse(http.getJsContent(urlPaged))
+                        processFlights(flightsListDocPaged, world)
+
+                        Thread.sleep(1000) // be nice to all services involved
+                    }
+
+                    Thread.sleep(1000) // be nice to all services involved
+                }
             }
         }
     }
