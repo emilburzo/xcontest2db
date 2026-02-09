@@ -70,6 +70,12 @@ const server = http.createServer(async (req, res) => {
         console.warn(`JWT not obtained after 20s for ${url}`);
       }
 
+      // Capture row count before hash change to detect table re-render
+      const rowCountBefore = await page.evaluate(() => {
+        const tbody = document.querySelector('#flights > table > tbody');
+        return tbody ? tbody.children.length : 0;
+      }).catch(() => 0);
+
       // Now navigate to the hash URL — the page JS will use the JWT for the API call
       await page.evaluate((h) => { window.location.hash = h; }, hash);
 
@@ -91,6 +97,22 @@ const server = http.createServer(async (req, res) => {
         ).catch(() => {
           console.warn(`Pager did not update for hash ${hash}`);
         });
+
+        // For date filter changes (no start] offset), wait for the table to re-render
+        if (!hash.match(/start\]/)) {
+          await page.waitForFunction(
+            (prevCount) => {
+              const tbody = document.querySelector('#flights > table > tbody');
+              if (!tbody) return false;
+              // Table has re-rendered when row count changes or content is present
+              return tbody.children.length > 0 && tbody.children.length !== prevCount;
+            },
+            rowCountBefore,
+            { timeout: 30_000 }
+          ).catch(() => {
+            console.warn(`Table did not re-render for date filter hash ${hash}`);
+          });
+        }
       }
 
       // Small settle time for DOM updates

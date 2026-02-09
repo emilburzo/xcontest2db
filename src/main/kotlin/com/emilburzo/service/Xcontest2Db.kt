@@ -67,29 +67,75 @@ class Xcontest2Db(
         for (url in baseUrls) {
             val world = url.contains("/world/")
 
-            // For world URLs, filter by country RO to only get Romanian flights
+            // Load the overview page to extract available dates
             val initialUrl = if (world) "$url#flights[sort]=reg@filter[country]=RO" else url
-            val lastPageOffset = getLastPageOffset(Jsoup.parse(http.getJsContent(initialUrl)), world)
-            require(lastPageOffset != null)
-            require(lastPageOffset > 0)
+            val overviewDoc = Jsoup.parse(http.getJsContent(initialUrl))
+            val dates = extractAvailableDates(overviewDoc)
+            log.info("found ${dates.size} dates for $url")
 
-            log.info("found last page offset: $lastPageOffset")
+            if (dates.isEmpty()) {
+                log.warn("no dates found for $url, skipping")
+                continue
+            }
 
-            for (offset in 0..lastPageOffset step 100) {
-                val urlPaged = if (world) {
-                    "$url#flights[sort]=reg@filter[country]=RO@flights[start]=$offset"
+            for (date in dates) {
+                // Load first page for this date
+                val dateUrl = if (world) {
+                    "$url#flights[sort]=reg@filter[country]=RO@filter[date]=$date"
                 } else {
-                    "$url#flights[start]=$offset"
+                    "$url#filter[date]=$date"
                 }
-                log.info("processing: $urlPaged")
+                log.info("processing date: $date for $url")
 
-                val flightsListDocPaged = Jsoup.parse(http.getJsContent(urlPaged))
+                val firstPageDoc = Jsoup.parse(http.getJsContent(dateUrl))
+                val lastPageOffset = getLastPageOffset(firstPageDoc, world) ?: 0
 
-                processFlights(flightsListDocPaged, world)
+                log.info("date $date: last page offset = $lastPageOffset")
 
-                Thread.sleep(60 * 1000) // be nice to all services involved
+                // Process first page (already loaded)
+                processFlights(firstPageDoc, world)
+
+                // Paginate remaining pages if any
+                for (offset in 100..lastPageOffset step 100) {
+                    val urlPaged = if (world) {
+                        "$url#flights[sort]=reg@filter[country]=RO@filter[date]=$date@flights[start]=$offset"
+                    } else {
+                        "$url#filter[date]=$date@flights[start]=$offset"
+                    }
+                    log.info("processing: $urlPaged")
+
+                    val flightsListDocPaged = Jsoup.parse(http.getJsContent(urlPaged))
+
+                    processFlights(flightsListDocPaged, world)
+
+                    Thread.sleep(1000) // be nice to all services involved
+                }
+
+                Thread.sleep(1000) // be nice to all services involved
             }
         }
+    }
+
+    /**
+     * Extract available dates from the date filter dropdown in the rendered HTML.
+     * The dropdown is a select element inside the filter form, with option values in YYYY-MM-DD format.
+     */
+    private fun extractAvailableDates(doc: Document): List<String> {
+        // The date filter is rendered as a <select> inside a filter form with options like:
+        // <option value="2025-09-30">30.09.25</option>
+        // Look for select elements whose options have date-like values
+        val datePattern = Regex("\\d{4}-\\d{2}-\\d{2}")
+        for (select in doc.select("select")) {
+            val options = select.select("option")
+            val dateValues = options.mapNotNull { option ->
+                val value = option.attr("value")
+                if (datePattern.matches(value)) value else null
+            }
+            if (dateValues.isNotEmpty()) {
+                return dateValues
+            }
+        }
+        return emptyList()
     }
 
     private fun getLastPageOffset(flightsListDoc: Document, world: Boolean): Int? {
