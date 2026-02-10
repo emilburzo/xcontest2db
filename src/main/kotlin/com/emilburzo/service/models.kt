@@ -21,6 +21,8 @@ data class Glider(
     val category: String,
 )
 
+data class ScrapeTask(val id: Long, val url: String, val date: String)
+
 data class Flight(
     val id: Long,
     val pilot: Pilot,

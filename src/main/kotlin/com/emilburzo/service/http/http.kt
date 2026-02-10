@@ -8,24 +8,31 @@ import io.ktor.client.statement.*
 import io.ktor.http.*
 import io.ktor.serialization.jackson.*
 import kotlinx.coroutines.runBlocking
+import org.jsoup.Jsoup
+import org.slf4j.LoggerFactory
 
+private val log = LoggerFactory.getLogger(Http::class.java)
 
 class Http {
+
+    private val client = HttpClient(CIO) {
+        engine { requestTimeout = 120 * 1000 }
+        install(ContentNegotiation) { jackson() }
+    }
 
     /**
      * slower, but handles javascript by using headless chrome
      */
-    fun getJsContent(url: String): String {
+    fun getJsContent(url: String, proxy: String? = null): String {
         return runBlocking {
-            HttpClient(CIO) {
-                engine { requestTimeout = 60 * 1000 }
-                install(ContentNegotiation) { jackson() }
-            }.use { client ->
-                client.post(BROWSERLESS_URL) {
-                    contentType(ContentType.Application.Json)
-                    setBody(BrowserlessContent(url))
-                }.bodyAsText()
+            val response = client.post(BROWSERLESS_URL) {
+                contentType(ContentType.Application.Json)
+                setBody(BrowserlessContent(url, proxy = proxy))
             }
+            if (!response.status.isSuccess()) {
+                throw RuntimeException("Playwright service returned HTTP ${response.status.value} for $url: ${response.bodyAsText()}")
+            }
+            response.bodyAsText()
         }
     }
 
@@ -34,9 +41,38 @@ class Http {
      */
     fun getContent(url: String): String {
         return runBlocking {
-            HttpClient().use { client ->
-                client.get(url).bodyAsText()
+            client.get(url).bodyAsText()
+        }
+    }
+
+    /**
+     * Fetch free proxy list from free-proxy-list.net, returning HTTPS-capable proxies
+     * as "http://host:port" strings, shuffled randomly.
+     */
+    fun fetchFreeProxies(): List<String> {
+        return try {
+            val html = getContent("https://free-proxy-list.net/en/")
+            val doc = Jsoup.parse(html)
+            val proxies = mutableListOf<String>()
+
+            for (row in doc.select("table.fpl-list tbody tr")) {
+                val cells = row.select("td")
+                if (cells.size < 8) continue
+
+                val ip = cells[0].text().trim()
+                val port = cells[1].text().trim()
+                val https = cells[6].text().trim().lowercase()
+
+                if (https == "yes" && ip.isNotEmpty() && port.isNotEmpty()) {
+                    proxies.add("http://$ip:$port")
+                }
             }
+
+            log.info("fetched ${proxies.size} HTTPS-capable free proxies")
+            proxies.shuffled()
+        } catch (e: Exception) {
+            log.error("failed to fetch free proxy list: ${e.message}")
+            emptyList()
         }
     }
 }

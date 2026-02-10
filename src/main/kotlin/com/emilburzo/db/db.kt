@@ -3,6 +3,7 @@ package com.emilburzo.db
 import com.emilburzo.service.Flight
 import com.emilburzo.service.Glider
 import com.emilburzo.service.Pilot
+import com.emilburzo.service.ScrapeTask
 import com.emilburzo.service.Takeoff
 import org.jetbrains.exposed.dao.id.EntityID
 import org.jetbrains.exposed.sql.*
@@ -35,8 +36,8 @@ class Db(
             password = pass
         )
 
-        // create table if it doesn't already exist
-        transaction { SchemaUtils.create(DbFlight) }
+        // create tables if they don't already exist
+        transaction { SchemaUtils.create(DbFlight, DbScrapeTask) }
     }
 
     fun persist(flight: Flight, pilotId: Long, takeoffId: Long?, gliderId: Long) {
@@ -135,6 +136,37 @@ class Db(
                         centroid = it[DbTakeoff.centroid]
                     )
                 }.firstOrNull()
+        }
+    }
+
+    fun insertScrapeTask(url: String, date: String) {
+        transaction {
+            DbScrapeTask.insertIgnore {
+                it[DbScrapeTask.url] = url
+                it[DbScrapeTask.date] = date
+            }
+        }
+    }
+
+    fun findUnprocessedScrapeTasks(): List<ScrapeTask> {
+        return transaction {
+            DbScrapeTask.selectAll().where { DbScrapeTask.processed eq false }
+                .orderBy(DbScrapeTask.id)
+                .map {
+                    ScrapeTask(
+                        id = it[DbScrapeTask.id].value,
+                        url = it[DbScrapeTask.url],
+                        date = it[DbScrapeTask.date],
+                    )
+                }
+        }
+    }
+
+    fun markScrapeTaskProcessed(taskId: Long) {
+        transaction {
+            DbScrapeTask.update({ DbScrapeTask.id eq taskId }) {
+                it[processed] = true
+            }
         }
     }
 }

@@ -43,3 +43,13 @@ object DbFlight : Table(name = "flights") {
     // pk
     override val primaryKey = PrimaryKey(id)
 }
+
+object DbScrapeTask : LongIdTable(name = "scrape_tasks") {
+    val url = varchar(name = "url", length = 512)
+    val date = varchar(name = "date", length = 10).default("")
+    val processed = bool(name = "processed").default(false)
+
+    init {
+        uniqueIndex("uq_scrape_tasks_url_date", url, date)
+    }
+}

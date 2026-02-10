@@ -4,6 +4,9 @@ set -euo pipefail
 IMAGE="playwright-content"
 CONTAINER="playwright-content"
 PORT="${PORT:-3000}"
+PROXY_SERVER="${PROXY_SERVER:-}"
+PROXY_USERNAME="${PROXY_USERNAME:-}"
+PROXY_PASSWORD="${PROXY_PASSWORD:-}"
 
 case "${1:-help}" in
   build)
@@ -19,7 +22,11 @@ case "${1:-help}" in
     fi
     docker rm -f "$CONTAINER" 2>/dev/null || true
     echo "Starting $CONTAINER on port $PORT..."
-    docker run -d --name "$CONTAINER" -p "$PORT:3000" --restart unless-stopped "$IMAGE"
+    docker run -d --name "$CONTAINER" -p "$PORT:3000" --restart unless-stopped \
+      -e PROXY_SERVER="$PROXY_SERVER" \
+      -e PROXY_USERNAME="$PROXY_USERNAME" \
+      -e PROXY_PASSWORD="$PROXY_PASSWORD" \
+      "$IMAGE"
     echo "Waiting for server..."
     for i in $(seq 1 15); do
       if curl -sf "http://localhost:$PORT/" >/dev/null 2>&1 || \

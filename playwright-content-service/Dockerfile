@@ -1,6 +1,10 @@
-FROM mcr.microsoft.com/playwright:v1.58.2-noble
+FROM node:20-bookworm
 WORKDIR /app
-COPY package.json server.mjs ./
+COPY package.json ./
 RUN npm install
+RUN npx playwright install --with-deps chromium
+RUN apt-get update && apt-get install -y --no-install-recommends xvfb \
+    && rm -rf /var/lib/apt/lists/*
+COPY server.mjs ./
 EXPOSE 3000
-CMD xvfb-run --auto-servernum --server-args="-screen 0 1280x1024x24" node server.mjs
+CMD ["xvfb-run", "--auto-servernum", "--server-args=-screen 0 1280x1024x24", "node", "server.mjs"]

@@ -9,9 +9,10 @@ fun main() {
     val xcontest = Xcontest2Db(db = Db(), http = Http())
 
     when (mode) {
-        "all" -> xcontest.fetchAll()
         "recent" -> xcontest.fetchRecent()
-        else -> error("Unknown FETCH_MODE: $mode (expected 'recent' or 'all')")
+        "populate" -> xcontest.populate()
+        "scrape" -> xcontest.scrape()
+        else -> error("Unknown FETCH_MODE: $mode (expected 'recent', 'populate', or 'scrape')")
     }
 }
 

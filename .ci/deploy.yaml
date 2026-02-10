@@ -1,9 +1,82 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: playwright-content
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: playwright-content
+  template:
+    metadata:
+      labels:
+        app: playwright-content
+    spec:
+      containers:
+        - name: playwright-content
+          image: emilburzo/playwright-content:SHORT_SHA
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 3000
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "2Gi"
+              cpu: "2000m"
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 15
+            periodSeconds: 30
+            timeoutSeconds: 30
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 3000
+            initialDelaySeconds: 30
+            periodSeconds: 60
+            timeoutSeconds: 30
+            failureThreshold: 3
+          env:
+            - name: PROXY_SERVER
+              valueFrom:
+                secretKeyRef:
+                  name: playwright-content.proxy
+                  key: server
+                  optional: true
+            - name: PROXY_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: playwright-content.proxy
+                  key: username
+                  optional: true
+            - name: PROXY_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: playwright-content.proxy
+                  key: password
+                  optional: true
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: playwright-content
+spec:
+  selector:
+    app: playwright-content
+  ports:
+    - port: 3000
+      targetPort: 3000
+---
 apiVersion: batch/v1
 kind: CronJob
 metadata:
   name: xcontest2db
 spec:
-  schedule: "*/19 * * * *"
+  schedule: "*/6 * * * *"
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 120
   successfulJobsHistoryLimit: 2
@@ -41,3 +114,7 @@ spec:
                       name: xcontest2db.db
                       key: password
                       optional: false
+                - name: BROWSERLESS_URL
+                  value: "http://playwright-content:3000/content"
+                - name: USE_FREE_PROXY
+                  value: "true"
