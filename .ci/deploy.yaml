@@ -76,7 +76,7 @@ kind: CronJob
 metadata:
   name: xcontest2db
 spec:
-  schedule: "*/19 * * * *"
+  schedule: "*/8 * * * *"
   concurrencyPolicy: Forbid
   startingDeadlineSeconds: 120
   successfulJobsHistoryLimit: 2
