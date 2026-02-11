@@ -12,7 +12,15 @@ import java.util.*
 fun mapFlights(flightsListDoc: Document, world: Boolean): List<Flight> {
     val flightsTable = flightsListDoc.selectFirst("#flights > table > tbody") ?: return emptyList()
     return flightsTable.select("tr")
+        .filter { isTakeoffInRomania(it) }
         .map { mapFlight(it, world) }
+}
+
+fun isTakeoffInRomania(row: Element): Boolean {
+    val takeoffTd = row.child(3)
+    val flag = takeoffTd.selectFirst("span.cic")
+        ?: error("No flag element found in takeoff column — HTML structure may have changed. Row: ${row.text()}")
+    return flag.classNames().any { it == "flag_ro" }
 }
 
 fun mapFlight(element: Element, world: Boolean): Flight {

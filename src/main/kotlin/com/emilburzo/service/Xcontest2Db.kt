@@ -42,24 +42,33 @@ class Xcontest2Db(
         for (proxy in proxies) {
             log.info("trying proxy: $proxy")
             try {
-                val worldHtml = http.getJsContent(FLIGHTS_RECENT_URL_WORLD, proxy = proxy)
-                val worldDoc = Jsoup.parse(worldHtml)
-                val worldFlights = mapFlights(worldDoc, world = true)
-
-                if (worldFlights.isEmpty()) {
-                    log.warn("proxy $proxy returned 0 flights for world, trying next")
-                    continue
-                }
-                log.info("proxy $proxy works — got ${worldFlights.size} world flights")
-
+                // Validate the proxy using the Romania URL first — it doesn't depend on
+                // hash-based country filtering or JWT, so it's a reliable test.
                 val romaniaHtml = http.getJsContent(FLIGHTS_RECENT_URL_ROMANIA, proxy = proxy)
                 val romaniaDoc = Jsoup.parse(romaniaHtml)
                 val romaniaFlights = mapFlights(romaniaDoc, world = false)
 
-                log.info("proxy $proxy — got ${romaniaFlights.size} romania flights")
+                if (romaniaFlights.isEmpty()) {
+                    log.warn("proxy $proxy returned 0 flights for romania, trying next")
+                    continue
+                }
 
-                processFlights(worldDoc, world = true)
+                log.info("proxy $proxy works — got ${romaniaFlights.size} romania flights")
+
                 processFlights(romaniaDoc, world = false)
+
+                // Also try the world URL with this proxy — it may return additional
+                // flights not in the Romania league. The country filter hash depends on
+                // xcontest's API cache and may silently fail without JWT, but the
+                // isTakeoffInRomania filter in the mapper prevents non-Romanian data.
+                try {
+                    val worldHtml = http.getJsContent(FLIGHTS_RECENT_URL_WORLD, proxy = proxy)
+                    val worldDoc = Jsoup.parse(worldHtml)
+                    processFlights(worldDoc, world = true)
+                } catch (e: Exception) {
+                    log.warn("world URL failed with proxy $proxy (continuing with romania only): ${e.message}")
+                }
+
                 return
             } catch (e: Exception) {
                 log.warn("proxy $proxy failed: ${e.message}")

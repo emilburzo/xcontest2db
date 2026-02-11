@@ -3,6 +3,7 @@ package com.emilburzo
 import com.emilburzo.db.toLocalDateTime
 import com.emilburzo.service.extractAvailableDatesFromDoc
 import com.emilburzo.service.http.parseFreeProxyList
+import com.emilburzo.service.isTakeoffInRomania
 import com.emilburzo.service.mapFlights
 import java.net.URI
 import org.jsoup.Jsoup
@@ -10,6 +11,7 @@ import org.junit.Test
 import net.postgis.jdbc.geometry.Point
 import java.util.*
 import kotlin.test.assertEquals
+import kotlin.test.assertFailsWith
 
 class FlightMapperTest {
 
@@ -152,11 +154,78 @@ class FlightMapperTest {
     }
 
     @Test
+    fun testNonRomanianTakeoffFiltered() {
+        val html = """
+            <html><body>
+            <div id="flights"><table class="XClist"><tbody>
+            <tr id="flight-100" class="">
+                <td title="FLID:100">1</td>
+                <td title="submitted: 11.02.26"><div class="full">11.02.26 <em>12:00</em></div></td>
+                <td class="plt"><div class="full"><span class="cic flag_ro" title="Romania">RO</span><a class="plt" href="https://www.xcontest.org/world/en/pilots/detail:testpilot"><b>Test Pilot</b></a></div></td>
+                <td><div class="full"><span class="cic flag_ro" title="Romania">RO</span><a class="lau" href="https://www.xcontest.org/world/en/flights-search/?filter[point]=25.0 45.0&amp;list[sort]=pts&amp;list[dir]=down" title="Romanian Takeoff">Romanian ...</a></div></td>
+                <td><div class="disc-ff" title="free flight"><em class="hide">FF</em></div></td>
+                <td class="km"><strong>10.00</strong> km</td>
+                <td class="pts"><strong>10.00</strong> p.</td>
+                <td class="dur"><strong><span class="d0"> </span><span class="d1">1 : 00</span></strong> h</td>
+                <td class="cat-B"><div title="Test Glider" class="sponsor test"><span class="hide">B</span></div></td>
+                <td><div class="for-qw"><div class="qw" title="quick view"></div></div></td>
+                <td class="detail-camera"><div><a class="detail" title="flight detail" href="https://www.xcontest.org/world/en/flights/detail:testpilot/11.02.2026/10:00"><span class="hide">flight detail</span></a></div></td>
+            </tr>
+            <tr id="flight-101" class="odd">
+                <td title="FLID:101">2</td>
+                <td title="submitted: 11.02.26"><div class="full">11.02.26 <em>13:00</em></div></td>
+                <td class="plt"><div class="full"><span class="cic flag_ro" title="Romania">RO</span><a class="plt" href="https://www.xcontest.org/world/en/pilots/detail:testpilot2"><b>Test Pilot 2</b></a></div></td>
+                <td><div class="full"><span class="cic flag_it" title="Italy">IT</span><a class="lau" href="https://www.xcontest.org/world/en/flights-search/?filter[point]=12.0 42.0&amp;list[sort]=pts&amp;list[dir]=down" title="Italian Takeoff">Italian ...</a></div></td>
+                <td><div class="disc-ff" title="free flight"><em class="hide">FF</em></div></td>
+                <td class="km"><strong>5.00</strong> km</td>
+                <td class="pts"><strong>5.00</strong> p.</td>
+                <td class="dur"><strong><span class="d0"> </span><span class="d1">0 : 30</span></strong> h</td>
+                <td class="cat-B"><div title="Test Glider 2" class="sponsor test"><span class="hide">B</span></div></td>
+                <td><div class="for-qw"><div class="qw" title="quick view"></div></div></td>
+                <td class="detail-camera"><div><a class="detail" title="flight detail" href="https://www.xcontest.org/world/en/flights/detail:testpilot2/11.02.2026/11:00"><span class="hide">flight detail</span></a></div></td>
+            </tr>
+            </tbody></table></div>
+            </body></html>
+        """.trimIndent()
+        val doc = Jsoup.parse(html)
+        val flights = mapFlights(doc, world = true)
+
+        assertEquals(1, flights.size)
+        assertEquals(100, flights[0].id)
+        assertEquals("Romanian Takeoff", flights[0].takeoff!!.name)
+    }
+
+    @Test
+    fun testIsTakeoffInRomania() {
+        val roHtml = """<html><body><table><tbody><tr>
+            <td>1</td><td>time</td><td>pilot</td>
+            <td><div class="full"><span class="cic flag_ro" title="Romania">RO</span><a class="lau" href="#">Takeoff</a></div></td>
+        </tr></tbody></table></body></html>""".trimIndent()
+        val itHtml = """<html><body><table><tbody><tr>
+            <td>1</td><td>time</td><td>pilot</td>
+            <td><div class="full"><span class="cic flag_it" title="Italy">IT</span><a class="lau" href="#">Takeoff</a></div></td>
+        </tr></tbody></table></body></html>""".trimIndent()
+
+        val noFlagHtml = """<html><body><table><tbody><tr>
+            <td>1</td><td>time</td><td>pilot</td>
+            <td><div class="full"><a class="lau" href="#">Takeoff</a></div></td>
+        </tr></tbody></table></body></html>""".trimIndent()
+
+        val roRow = Jsoup.parse(roHtml).selectFirst("tr")!!
+        val itRow = Jsoup.parse(itHtml).selectFirst("tr")!!
+        val noFlagRow = Jsoup.parse(noFlagHtml).selectFirst("tr")!!
+
+        assertEquals(true, isTakeoffInRomania(roRow))
+        assertEquals(false, isTakeoffInRomania(itRow))
+        assertFailsWith<IllegalStateException> { isTakeoffInRomania(noFlagRow) }
+    }
+
+    @Test
     fun testFlightsListWithUtc() {
         val document = Jsoup.parse(getResourceAsText("/flights_list/with_utc.html"))
         val flights = mapFlights(document, world = true)
 
-        assertEquals(flights.size, 100)
+        assertEquals(1, flights.size) // only 1 flight has a Romanian takeoff
     }
 
     @Test
