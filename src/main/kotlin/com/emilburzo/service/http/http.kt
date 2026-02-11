@@ -52,22 +52,7 @@ class Http {
     fun fetchFreeProxies(): List<String> {
         return try {
             val html = getContent("https://free-proxy-list.net/en/")
-            val doc = Jsoup.parse(html)
-            val proxies = mutableListOf<String>()
-
-            for (row in doc.select("table.fpl-list tbody tr")) {
-                val cells = row.select("td")
-                if (cells.size < 8) continue
-
-                val ip = cells[0].text().trim()
-                val port = cells[1].text().trim()
-                val https = cells[6].text().trim().lowercase()
-
-                if (https == "yes" && ip.isNotEmpty() && port.isNotEmpty()) {
-                    proxies.add("http://$ip:$port")
-                }
-            }
-
+            val proxies = parseFreeProxyList(html)
             log.info("fetched ${proxies.size} HTTPS-capable free proxies")
             proxies.shuffled()
         } catch (e: Exception) {
@@ -75,4 +60,24 @@ class Http {
             emptyList()
         }
     }
+}
+
+fun parseFreeProxyList(html: String): List<String> {
+    val doc = Jsoup.parse(html)
+    val proxies = mutableListOf<String>()
+
+    for (row in doc.select(".fpl-list table tbody tr")) {
+        val cells = row.select("td")
+        if (cells.size < 8) continue
+
+        val ip = cells[0].text().trim()
+        val port = cells[1].text().trim()
+        val https = cells[6].text().trim().lowercase()
+
+        if (https == "yes" && ip.isNotEmpty() && port.isNotEmpty()) {
+            proxies.add("http://$ip:$port")
+        }
+    }
+
+    return proxies
 }

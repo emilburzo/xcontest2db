@@ -2,7 +2,9 @@ package com.emilburzo
 
 import com.emilburzo.db.toLocalDateTime
 import com.emilburzo.service.extractAvailableDatesFromDoc
+import com.emilburzo.service.http.parseFreeProxyList
 import com.emilburzo.service.mapFlights
+import java.net.URI
 import org.jsoup.Jsoup
 import org.junit.Test
 import net.postgis.jdbc.geometry.Point
@@ -228,6 +230,21 @@ class FlightMapperTest {
         val doc = Jsoup.parse(html)
         val dates = extractAvailableDatesFromDoc(doc)
         assertEquals(emptyList(), dates)
+    }
+}
+
+class FreeProxyListTest {
+
+    @Test
+    fun testParseFreeProxyListLive() {
+        val html = URI("https://free-proxy-list.net/en/").toURL().readText()
+        val proxies = parseFreeProxyList(html)
+
+        assert(proxies.isNotEmpty()) { "Expected at least one HTTPS-capable proxy, got 0. HTML structure may have changed." }
+        for (proxy in proxies) {
+            assert(proxy.startsWith("http://")) { "Proxy should start with http://, got: $proxy" }
+            assert(proxy.matches(Regex("http://[^:]+:\\d+"))) { "Proxy should match http://host:port, got: $proxy" }
+        }
     }
 }
 
