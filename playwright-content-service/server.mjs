@@ -63,8 +63,8 @@ async function checkBrowserHealth() {
   try {
     browser = await chromium.launch({ headless: false, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
     const page = await browser.newPage();
-    const response = await page.goto('http://connectivitycheck.gstatic.com/generate_204', { timeout: 30_000 });
-    lastHealthCheck = { time: now, ok: response?.status() === 204 };
+    const response = await page.goto('https://www.google.com/robots.txt', { timeout: 30_000 });
+    lastHealthCheck = { time: now, ok: response?.ok() };
     return lastHealthCheck.ok;
   } catch (err) {
     console.error('Health check failed:', err.message);
