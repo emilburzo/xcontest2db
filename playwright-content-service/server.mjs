@@ -27,7 +27,7 @@ function proxyUsernameWithSession(baseUsername) {
 async function detectChromiumVersion() {
   let browser;
   try {
-    browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+    browser = await chromium.launch({ headless: false, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
     const version = browser.version(); // e.g. "145.0.7632.6"
     return version.split('.')[0] + '.0.0.0';
   } finally {
@@ -52,7 +52,7 @@ function randomUserAgent() {
 
 // Cache health check result to avoid launching a browser on every probe
 let lastHealthCheck = { time: 0, ok: false };
-const HEALTH_CACHE_MS = 30_000;
+const HEALTH_CACHE_MS = 60_000;
 
 async function checkBrowserHealth() {
   const now = Date.now();
@@ -61,12 +61,13 @@ async function checkBrowserHealth() {
   }
   let browser;
   try {
-    browser = await chromium.launch({ headless: true, args: ['--no-sandbox'] });
+    browser = await chromium.launch({ headless: false, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
     const page = await browser.newPage();
-    const response = await page.goto('http://connectivitycheck.gstatic.com/generate_204', { timeout: 15_000 });
+    const response = await page.goto('http://connectivitycheck.gstatic.com/generate_204', { timeout: 30_000 });
     lastHealthCheck = { time: now, ok: response?.status() === 204 };
     return lastHealthCheck.ok;
-  } catch {
+  } catch (err) {
+    console.error('Health check failed:', err.message);
     lastHealthCheck = { time: now, ok: false };
     return false;
   } finally {
