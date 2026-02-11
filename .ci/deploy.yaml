@@ -29,14 +29,14 @@ spec:
             httpGet:
               path: /health
               port: 3000
-            initialDelaySeconds: 15
+            initialDelaySeconds: 60
             periodSeconds: 30
             timeoutSeconds: 30
           livenessProbe:
             httpGet:
               path: /health
               port: 3000
-            initialDelaySeconds: 30
+            initialDelaySeconds: 90
             periodSeconds: 60
             timeoutSeconds: 30
             failureThreshold: 3
