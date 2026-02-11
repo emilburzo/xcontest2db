@@ -25,7 +25,7 @@ The app follows a three-layer pipeline: **HTTP fetch → HTML parse/map → DB p
 
 - **`main/Main.kt`** — Entry point. Wires `Db` and `Http` into `Xcontest2Db`, calls `fetchRecent()`.
 - **`service/Xcontest2Db.kt`** — Orchestrator. Fetches flight list pages, deduplicates against existing DB records, and persists new flights with their related entities (pilot, takeoff, glider) using get-or-create pattern.
-- **`service/mapper.kt`** — Parses xcontest HTML tables (Jsoup) into domain models. Handles two page layouts: world (`world=true`, pilot element has extra child) and Romania (`world=false`).
+- **`service/mapper.kt`** — Parses xcontest HTML tables (Jsoup) into domain models. Handles two page layouts: world (`world=true`, pilot element has extra child) and Romania (`world=false`). Filters flights by takeoff country using `isTakeoffInRomania()` which checks for `flag_ro` CSS class on the takeoff column's flag `<span>`. Errors if the flag element is missing (HTML structure change detection).
 - **`service/http/http.kt`** — HTTP client (Ktor/CIO). Uses a Browserless (headless Chrome) service to render JavaScript-heavy pages. Browserless URL is hardcoded in `http/constants.kt`.
 - **`db/db.kt`** — Database layer using Jetbrains Exposed (DSL mode). Connects to PostgreSQL via env vars (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`).
 - **`db/gis.kt`** — Custom Exposed `ColumnType` for PostGIS `GEOGRAPHY(Point)` columns, bridging `org.postgis.Point` ↔ `PGgeography`.
@@ -156,7 +156,7 @@ Configured via environment variables on the Docker container. Used for full scra
 
 The `POST /content` API accepts an optional `proxy` field in the JSON body (e.g., `{"url":"...","waitFor":"...","proxy":"http://1.2.3.4:8080"}`). When set, it overrides any env var proxy for that request.
 
-**JWT handling with free proxies:** Free/datacenter proxy IPs cannot pass Cloudflare Turnstile, so the JWT is never obtained. When a per-request proxy is used, the service waits only 10s for JWT (instead of 30s) and proceeds without it if not obtained. This works because the **first page (offset 0) is server-cached** and doesn't require JWT — sufficient for `recent` mode which only needs the first page.
+**JWT handling with free proxies:** When a per-request proxy is used and JWT is not obtained within 30s, the service proceeds without it (logs a warning but does not error). Turnstile CAN pass through free/datacenter proxies (confirmed via Tor Browser testing), but success depends on the specific proxy. The **first page (offset 0) is server-cached** and works without JWT.
 
 #### Free proxy rotation in `fetchRecent()`
 
@@ -164,9 +164,10 @@ When `USE_FREE_PROXY=true` is set, `fetchRecent()` in `Xcontest2Db.kt`:
 1. Scrapes HTTPS-capable proxies from `free-proxy-list.net` (via `Http.fetchFreeProxies()`)
 2. Shuffles the list randomly
 3. Tries each proxy in turn, calling the Playwright content service with `{"proxy":"http://host:port"}` in the request body
-4. Validates the response actually contains flights (not an empty page)
-5. Stops on the first proxy that returns real flight data for both world and Romania URLs
-6. If all proxies fail, logs an error
+4. Validates the proxy using the **Romania URL first** (reliable — no hash-based country filter needed)
+5. If Romania returns flights, processes them, then tries the **world URL as best-effort** (world URL failure doesn't block Romania data)
+6. Stops on the first proxy that returns real flight data
+7. If all proxies fail, logs an error
 
 **Note:** `BROWSERLESS_URL` must point to the Playwright content service (not the old browserless) when using free proxies, since only the Playwright service supports per-request proxy.
 
@@ -176,9 +177,9 @@ When `USE_FREE_PROXY=true` is set, `fetchRecent()` in `Xcontest2Db.kt`:
 docker run --rm --entrypoint bash <image> -c '/ms-playwright/chromium-*/chrome-linux64/chrome --version'
 ```
 
-### The `fetchAll()` flow
+### The `populate()` + `scrape()` flow
 
-`Xcontest2Db.fetchAll()` uses a **two-level loop** (dates × pages) to bypass the 1000-item pagination cap:
+`populate()` creates date-based scrape tasks and `scrape()` processes them, using a **two-level loop** (dates × pages) to bypass the 1000-item pagination cap:
 
 1. For each base URL (year/league), loads the overview page
 2. Extracts available dates from the date filter `<select>` dropdown (option values in `YYYY-MM-DD` format)
@@ -208,6 +209,18 @@ For date-filter hashes (no `start]` offset), the service:
 2. Sets `window.location.hash` to the date-filtered hash
 3. Waits for the table row count to change (confirms filtered data has rendered)
 4. Applies 2s settle time for final DOM updates
+
+### Known issue: hash handling race condition for non-paginated hashes
+
+For hashes without `start]` (e.g., country filter `filter[country]=RO@flights[sort]=reg`), the Playwright service's wait logic has a weakness:
+
+1. The first `waitForFunction` checks for `start]` in the hash — **no match → returns `true` immediately** (designed for pagination, not filters)
+2. The fallback `waitForFunction` waits for `tbody.children.length !== prevCount` — but if both unfiltered and filtered pages have ~100 rows, the row count **never changes**, so this **times out after 30s** and `.catch()` silently swallows the error
+3. After 2s settle, the content is returned
+
+**In practice this usually works**: the filtered API call completes in 1-5s, so by the time the 30s timeout fires, the table has already been showing correct filtered data for ~25s. But if the API call fails for any reason (403, network error, slow proxy), the table still shows the initial unfiltered data, and the service returns it without error.
+
+**Defense-in-depth**: `isTakeoffInRomania()` in `mapper.kt` filters by takeoff country flag (`flag_ro`) regardless of whether the server-side country filter was applied. This prevents non-Romanian flights from being persisted even if the Playwright service returns unfiltered data.
 
 ## Tech Stack
 
