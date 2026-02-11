@@ -148,10 +148,15 @@ class Db(
         }
     }
 
-    fun findUnprocessedScrapeTasks(): List<ScrapeTask> {
+    fun findUnprocessedScrapeTasks(excludeWorld: Boolean): List<ScrapeTask> {
         return transaction {
-            DbScrapeTask.selectAll().where { DbScrapeTask.processed eq false }
-                .orderBy(DbScrapeTask.id)
+            val query = DbScrapeTask.selectAll().where { DbScrapeTask.processed eq false }
+
+            if (excludeWorld) {
+                query.andWhere { DbScrapeTask.url notLike "%world%" }
+            }
+
+            query.orderBy(DbScrapeTask.id)
                 .map {
                     ScrapeTask(
                         id = it[DbScrapeTask.id].value,
