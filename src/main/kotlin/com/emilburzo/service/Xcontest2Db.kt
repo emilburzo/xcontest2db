@@ -109,7 +109,7 @@ class Xcontest2Db(
     }
 
     fun scrape() {
-        val tasks = db.findUnprocessedScrapeTasks(excludeWorld = true)
+        val tasks = db.findUnprocessedScrapeTasks(excludeWorld = false)
         log.info("found ${tasks.size} unprocessed scrape tasks")
 
         for (task in tasks.shuffled()) {
