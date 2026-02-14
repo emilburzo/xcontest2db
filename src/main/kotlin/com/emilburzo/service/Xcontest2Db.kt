@@ -316,7 +316,7 @@ fun extractAvailableDatesFromDoc(doc: Document): List<String> {
     return emptyList()
 }
 
-private fun delay(minutes: Int = Random.nextInt(1, 10)) {
+private fun delay(minutes: Int = Random.nextInt(5, 30)) {
     val sleepMillis = minutes * 60 * 1000L
     log.info("sleeping for $minutes minutes...")
     Thread.sleep(sleepMillis)
