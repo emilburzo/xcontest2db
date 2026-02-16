@@ -222,6 +222,36 @@ For hashes without `start]` (e.g., country filter `filter[country]=RO@flights[so
 
 **Defense-in-depth**: `isTakeoffInRomania()` in `mapper.kt` filters by takeoff country flag (`flag_ro`) regardless of whether the server-side country filter was applied. This prevents non-Romanian flights from being persisted even if the Playwright service returns unfiltered data.
 
+### Static asset caching (bandwidth optimization)
+
+The Playwright content service uses **application-level route caching** to avoid re-downloading static CDN assets on every browser launch. Without this, a full scrape (~150 page loads) would re-download ~700 MB of identical static assets because Chrome's built-in HTTP cache is partitioned by proxy credentials (each launch gets a new sticky session ID → different cache partition).
+
+**How it works:** `page.route('**/*', ...)` intercepts all requests. For cacheable CDN domains, responses are stored in an in-memory `Map` in the Node.js process. On cache hit, `route.fulfill()` serves the cached response directly without any network call. On cache miss, `route.fetch()` gets the response from the network, caches it, then fulfills.
+
+**Cached domains** (configured in `CACHEABLE_DOMAINS`):
+- `unpkg.com` — JS library CDN (immutable)
+- `d393ilck4xazzy.cloudfront.net` — CloudFront CDN assets
+- `s.xcontest.app` / `s.xcontest.org` — xcontest static assets
+- `static.cloudflareinsights.com` / `cloudflareinsights.com` — analytics
+
+**NOT cached:**
+- `www.xcontest.org` — dynamic flight data and API responses
+- `challenges.cloudflare.com` — Turnstile challenge responses are dynamic/session-specific; caching them breaks JWT verification
+
+**Measured impact** (tested with residential proxy, each request gets fresh proxy session + UA):
+
+| Request | Cache hits | Cache misses | Bandwidth fetched |
+|---------|-----------|-------------|-------------------|
+| 1st (cold) | 0 | 54 | ~1,871 KB |
+| 2nd (warm) | 55 | 31 | ~1 KB |
+| 3rd+ (warm) | 84 | 2 | ~25 KB |
+
+Projected savings for a full 150-request scrape: ~700 MB of CDN traffic (unpkg, CloudFront, xcontest static) reduced to a one-time ~5 MB download. Turnstile traffic (~312 MB) still goes through the proxy since it cannot be cached. **Estimated ~70% total bandwidth reduction.**
+
+**What's preserved:** proxy session rotation (new IP per browser launch), User-Agent rotation, Turnstile challenge flow — all unchanged. The cache only affects static CDN assets that are identical across all requests.
+
+**Why not Chrome's built-in cache:** Chrome partitions its HTTP disk cache by proxy credentials. Since each browser launch uses a different sticky session username (e.g., `customer-name-sessid-abc123`), Chrome treats each launch as a different proxy and refuses to reuse cached resources. This was confirmed by testing `launchPersistentContext` with a shared user data directory — 0 cache hits with proxy, 38 cache hits without proxy on the same directory. The `--disk-cache-dir` Chrome flag also doesn't work with Playwright's ephemeral profiles (cache index created but no data stored).
+
 ## Tech Stack
 
 - Kotlin 2.0 / JVM 21, Gradle with Shadow plugin (fat JAR)

@@ -9,6 +9,37 @@ const PROXY_USERNAME = process.env.PROXY_USERNAME || null;
 const PROXY_PASSWORD = process.env.PROXY_PASSWORD || null;
 
 /**
+ * Application-level cache for static assets.
+ * Chrome's built-in HTTP cache is partitioned by proxy credentials, making it useless
+ * when proxy sessions rotate (each launch gets a different sticky session ID).
+ * This cache lives in the Node.js process and persists across all browser launches.
+ * Key: URL, Value: { status, headers, body }
+ */
+const assetCache = new Map();
+
+// Domains whose responses are safe to cache (static CDN assets).
+// Excludes www.xcontest.org (dynamic flight data/API responses).
+const CACHEABLE_DOMAINS = new Set([
+  // NOTE: challenges.cloudflare.com is NOT cached — Turnstile challenge
+  // responses are dynamic/session-specific and caching breaks verification.
+  'unpkg.com',                  // JS library CDN (immutable)
+  'd393ilck4xazzy.cloudfront.net', // CloudFront CDN assets
+  's.xcontest.app',             // xcontest static assets
+  's.xcontest.org',             // xcontest static assets (legacy)
+  'static.cloudflareinsights.com', // analytics
+  'cloudflareinsights.com',
+]);
+
+function isCacheableUrl(url) {
+  try {
+    const hostname = new URL(url).hostname;
+    return CACHEABLE_DOMAINS.has(hostname);
+  } catch {
+    return false;
+  }
+}
+
+/**
  * Generate a proxy username with a sticky session ID.
  * Residential proxies rotate IPs per connection by default, which breaks
  * Cloudflare Turnstile (it correlates challenge IP with verification IP).
@@ -138,6 +169,48 @@ const server = http.createServer(async (req, res) => {
     browser = await chromium.launch(launchOptions);
     const page = await browser.newPage({ userAgent });
 
+    // Set up application-level caching for static assets.
+    // Chrome's built-in HTTP cache is partitioned by proxy credentials, so it's useless
+    // when sticky sessions rotate the proxy username on each launch. This route-level
+    // cache lives in the Node.js process and persists across all browser launches.
+    let cacheHits = 0;
+    let cacheMisses = 0;
+    await page.route('**/*', async (route) => {
+      const reqUrl = route.request().url();
+      if (!isCacheableUrl(reqUrl)) {
+        await route.continue();
+        return;
+      }
+
+      if (assetCache.has(reqUrl)) {
+        cacheHits++;
+        const cached = assetCache.get(reqUrl);
+        await route.fulfill({
+          status: cached.status,
+          headers: cached.headers,
+          body: cached.body,
+        });
+        return;
+      }
+
+      // Cache miss — fetch from network, then cache the response
+      try {
+        const response = await route.fetch();
+        const body = await response.body();
+        const status = response.status();
+        const headers = response.headers();
+        cacheMisses++;
+
+        if (status >= 200 && status < 400) {
+          assetCache.set(reqUrl, { status, headers, body });
+        }
+
+        await route.fulfill({ status, headers, body });
+      } catch (err) {
+        await route.continue().catch(() => {});
+      }
+    });
+
     // Always load the base URL first (without hash) so the initial
     // API call hits the server cache and Turnstile can complete.
     await page.goto(baseUrl, { waitUntil: 'domcontentloaded', timeout });
@@ -219,6 +292,10 @@ const server = http.createServer(async (req, res) => {
     } else {
       // No hash — just wait a bit for initial render to settle
       await new Promise(r => setTimeout(r, 1000));
+    }
+
+    if (cacheHits > 0 || cacheMisses > 0) {
+      console.log(`[cache] hits: ${cacheHits}, misses: ${cacheMisses}, total cached: ${assetCache.size}`);
     }
 
     const content = await page.content();
