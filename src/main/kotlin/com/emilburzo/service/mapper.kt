@@ -3,17 +3,39 @@ package com.emilburzo.service
 import org.jsoup.nodes.Document
 import org.jsoup.nodes.Element
 import net.postgis.jdbc.geometry.Point
-import java.net.URL
+import org.slf4j.LoggerFactory
 import java.time.LocalDateTime
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.util.*
 
+private val log = LoggerFactory.getLogger("com.emilburzo.service.mapper")
+
 fun mapFlights(flightsListDoc: Document, world: Boolean): List<Flight> {
     val flightsTable = flightsListDoc.selectFirst("#flights > table > tbody") ?: return emptyList()
-    return flightsTable.select("tr")
-        .filter { isTakeoffInRomania(it) }
-        .map { mapFlight(it, world) }
+    val rows = flightsTable.select("tr").filter { isTakeoffInRomania(it) }
+
+    // map row by row: a single row we can't read must not cost us the other 99
+    val flights = mutableListOf<Flight>()
+    var firstFailure: Exception? = null
+    for (row in rows) {
+        try {
+            flights.add(mapFlight(row, world))
+        } catch (e: Exception) {
+            log.error("failed to map flight row, skipping it: ${e.message} — row: ${row.text()}")
+            if (firstFailure == null) firstFailure = e
+        }
+    }
+
+    // ...but if every row fails, the HTML structure changed and we want to know
+    if (rows.isNotEmpty() && flights.isEmpty()) {
+        throw IllegalStateException(
+            "all ${rows.size} flight rows failed to parse — HTML structure may have changed",
+            firstFailure
+        )
+    }
+
+    return flights
 }
 
 fun isTakeoffInRomania(row: Element): Boolean {
@@ -94,23 +116,45 @@ fun mapFlightType(element: Element): String {
     return element.attr("title")
 }
 
+private val TAKEOFF_POINT_PATTERN = Regex("""filter\[point]=(-?[\d.]+)(?:\s|\+|%20)(-?[\d.]+)""")
+private val TAKEOFF_SITE_PATTERN = Regex("""filter\[site]=([A-Za-z0-9_-]+)""")
+
 fun mapTakeoff(element: Element): Takeoff {
     val a = element.child(1)
     val href = a.attr("href")
-    val name = a.attr("title")
-    val parts = URL(href).query
-        .split("&")
-        .first()
-        .split("=")
-        .last()
-        .split(" ")
-    val point = Point(parts[0].toDouble(), parts[1].toDouble())
 
     return Takeoff(
         id = null,
-        name = name,
-        centroid = point
+        name = a.attr("title"),
+        centroid = mapTakeoffCentroid(href),
+        siteId = mapTakeoffSiteId(href),
     )
+}
+
+/**
+ * Takeoffs without a registered site still link to the coordinate search
+ * (".../flights-search/?filter[point]=<lon> <lat>&..."), which is the only
+ * place the flights list ever exposes coordinates.
+ */
+fun mapTakeoffCentroid(href: String): Point? {
+    val match = TAKEOFF_POINT_PATTERN.find(href) ?: return null
+    val (lon, lat) = match.destructured
+    return Point(lon.toDouble(), lat.toDouble())
+}
+
+/**
+ * Takeoffs with a registered site link to the hot-spots page instead
+ * (".../hotspots?detail#filter[date]=<date>@filter[site]=<id>.<signature>"),
+ * where <id> is the base64 encoded site id and there are no coordinates at all.
+ */
+fun mapTakeoffSiteId(href: String): Long? {
+    val encoded = TAKEOFF_SITE_PATTERN.find(href)?.groupValues?.get(1) ?: return null
+    return try {
+        String(Base64.getUrlDecoder().decode(encoded)).toLongOrNull()
+    } catch (e: IllegalArgumentException) {
+        log.warn("could not base64 decode site id '$encoded' from $href")
+        null
+    }
 }
 
 fun mapPilot(element: Element, world: Boolean): Pilot {
@@ -123,6 +167,19 @@ fun mapPilot(element: Element, world: Boolean): Pilot {
         name = name,
         username = url.split(":").last()
     )
+}
+
+private val VOLUME_PATTERN = Regex("""volume\s*:\s*'(\d{4})'""")
+
+/**
+ * The season the flights list is showing, e.g. "2026" — xcontest's sites API
+ * is addressed per season, and this keeps us on the same one as the page.
+ */
+fun mapVolume(flightsListDoc: Document): String? {
+    for (script in flightsListDoc.select("script")) {
+        VOLUME_PATTERN.find(script.data())?.let { return it.groupValues[1] }
+    }
+    return null
 }
 
 fun mapStartTime(element: Element): Date {

@@ -41,6 +41,8 @@ class Db(
     }
 
     fun persist(flight: Flight, pilotId: Long, takeoffId: Long?, gliderId: Long) {
+        val start = requireNotNull(flight.startPoint) { "flight ${flight.id} has no start point" }
+
         transaction {
             DbFlight.insert {
                 it[id] = flight.id
@@ -49,7 +51,7 @@ class Db(
                     it[takeoff] = EntityID(takeoffId, DbTakeoff)
                 }
                 it[startTime] = toLocalDateTime(flight.startTime)
-                it[startPoint] = flight.startPoint
+                it[startPoint] = start
                 it[type] = flight.type
                 it[distanceKm] = flight.distanceKm
                 it[score] = flight.score
@@ -70,10 +72,12 @@ class Db(
     }
 
     fun persist(takeoff: Takeoff): Long {
+        val point = requireNotNull(takeoff.centroid) { "takeoff '${takeoff.name}' has no centroid" }
+
         return transaction {
             DbTakeoff.insertAndGetId {
                 it[name] = takeoff.name
-                it[centroid] = takeoff.centroid
+                it[centroid] = point
             }.value
         }
     }

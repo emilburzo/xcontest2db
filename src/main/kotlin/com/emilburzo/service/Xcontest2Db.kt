@@ -5,6 +5,7 @@ import com.emilburzo.service.http.Http
 import org.jsoup.Jsoup
 import org.jsoup.nodes.Document
 import org.slf4j.LoggerFactory
+import java.time.Year
 import kotlin.jvm.javaClass
 import kotlin.random.Random
 
@@ -18,6 +19,8 @@ class Xcontest2Db(
     private val db: Db,
     private val http: Http,
 ) {
+
+    private val sites = Sites(http)
 
     fun fetchRecent() {
         log.info("fetching recent flights")
@@ -55,7 +58,7 @@ class Xcontest2Db(
 
                 log.info("proxy $proxy works — got ${romaniaFlights.size} romania flights")
 
-                processFlights(romaniaDoc, world = false)
+                processFlights(romaniaDoc, world = false, proxy = proxy)
 
                 // Also try the world URL with this proxy — it may return additional
                 // flights not in the Romania league. The country filter hash depends on
@@ -64,7 +67,7 @@ class Xcontest2Db(
                 try {
                     val worldHtml = http.getJsContent(FLIGHTS_RECENT_URL_WORLD, proxy = proxy)
                     val worldDoc = Jsoup.parse(worldHtml)
-                    processFlights(worldDoc, world = true)
+                    processFlights(worldDoc, world = true, proxy = proxy)
                 } catch (e: Exception) {
                     log.warn("world URL failed with proxy $proxy (continuing with romania only): ${e.message}")
                 }
@@ -222,7 +225,7 @@ class Xcontest2Db(
         return null
     }
 
-    private fun processFlights(flightsListDoc: Document, world: Boolean) {
+    private fun processFlights(flightsListDoc: Document, world: Boolean, proxy: String? = null) {
         val flightsAll = mapFlights(flightsListDoc, world)
         log.info("parsed ${flightsAll.size} flights")
 
@@ -235,10 +238,9 @@ class Xcontest2Db(
         log.info("found ${flights.size} new flights")
 
         // persist
-        flights.forEach {
-            persist(it)
-        }
-        log.info("persisted ${flights.size} flights")
+        val volume = mapVolume(flightsListDoc) ?: Year.now().toString()
+        val persisted = flights.count { persist(it, volume, proxy) }
+        log.info("persisted $persisted of ${flights.size} flights")
     }
 
     private fun getExistingFlightIds(flights: List<Flight>): Set<Long> {
@@ -246,19 +248,63 @@ class Xcontest2Db(
         return db.findExistingFlightIds(flightIds)
     }
 
-    private fun persist(flight: Flight) {
+    /**
+     * @return whether the flight was persisted — a flight we can't place on the
+     * map yet is left alone rather than stored with made up coordinates, so the
+     * next run picks it up again (it never enters the "existing flights" set).
+     */
+    private fun persist(flight: Flight, volume: String, proxy: String?): Boolean {
+        val takeoff = resolveTakeoff(flight.takeoff, volume, proxy)
+        val startPoint = flight.startPoint ?: takeoff?.centroid
+
+        if (startPoint == null) {
+            log.error(
+                "could not resolve coordinates for takeoff '${flight.takeoff?.name}' " +
+                        "(site ${flight.takeoff?.siteId}), leaving flight ${flight.id} for the next run"
+            )
+            return false
+        }
+
         val pilotId = getOrCreate(flight.pilot)
-        val takeoffId = getOrCreate(flight.takeoff)
+        val takeoffId = getOrCreate(takeoff)
         val gliderId = getOrCreate(flight.glider)
 
         log.info("trying to persist flight: $flight, pilotId: $pilotId, takeoffId: $takeoffId, gliderId: $gliderId")
 
         db.persist(
-            flight = flight,
+            flight = flight.copy(startPoint = startPoint),
             pilotId = pilotId,
             takeoffId = takeoffId,
             gliderId = gliderId,
         )
+
+        return true
+    }
+
+    /**
+     * Fills in the coordinates of takeoffs the flights list only gave us a site
+     * id for (see [mapTakeoffSiteId]), looking first in our own takeoffs table —
+     * which keeps start points consistent with the flights we already have and
+     * covers every takeoff we have scraped before — and falling back to
+     * xcontest's sites API for sites we have never seen.
+     */
+    private fun resolveTakeoff(takeoff: Takeoff?, volume: String, proxy: String?): Takeoff? {
+        takeoff ?: return null
+
+        if (takeoff.centroid != null) {
+            return takeoff
+        }
+
+        val known = db.findTakeoff(takeoff.name)
+        if (known?.centroid != null) {
+            return takeoff.copy(id = known.id, centroid = known.centroid)
+        }
+
+        val siteId = takeoff.siteId ?: return takeoff
+        val position = sites.findPosition(siteId, volume, proxy) ?: return takeoff
+        log.info("resolved new takeoff '${takeoff.name}' to $position via site $siteId")
+
+        return takeoff.copy(centroid = position)
     }
 
     private fun getOrCreate(glider: Glider): Long {
@@ -276,11 +322,14 @@ class Xcontest2Db(
             return null
         }
 
-        val db = db.findTakeoff(takeoff.name)
-        if (db != null) {
-            return db.id
+        // already looked up while resolving the coordinates
+        takeoff.id?.let { return it }
+
+        val existing = db.findTakeoff(takeoff.name)
+        if (existing != null) {
+            return existing.id
         }
-        return this.db.persist(takeoff)
+        return db.persist(takeoff)
     }
 
     private fun getOrCreate(pilot: Pilot): Long {

@@ -23,17 +23,26 @@ class Http {
     /**
      * slower, but handles javascript by using headless chrome
      */
-    fun getJsContent(url: String, proxy: String? = null): String {
+    fun getJsContent(url: String, waitFor: String = ".XClist", proxy: String? = null): String {
         return runBlocking {
             val response = client.post(BROWSERLESS_URL) {
                 contentType(ContentType.Application.Json)
-                setBody(BrowserlessContent(url, proxy = proxy))
+                setBody(BrowserlessContent(url, waitFor = waitFor, proxy = proxy))
             }
             if (!response.status.isSuccess()) {
                 throw RuntimeException("Playwright service returned HTTP ${response.status.value} for $url: ${response.bodyAsText()}")
             }
             response.bodyAsText()
         }
+    }
+
+    /**
+     * xcontest's API refuses plain requests from our IP, so it has to be fetched
+     * through the browser as well — chrome renders the JSON body inside a <pre>.
+     */
+    fun getJsonContent(url: String, proxy: String? = null): String {
+        val content = getJsContent(url, waitFor = "body", proxy = proxy)
+        return Jsoup.parse(content).selectFirst("pre")?.wholeText() ?: content
     }
 
     /**

@@ -9,10 +9,16 @@ data class Pilot(
     val username: String,
 )
 
+/**
+ * [centroid] is null when the flights list links the takeoff to the hot-spots
+ * page instead of the coordinate search — those rows only carry [siteId], and
+ * the coordinates have to be resolved separately.
+ */
 data class Takeoff(
     val id: Long?,
     val name: String,
-    val centroid: Point
+    val centroid: Point?,
+    val siteId: Long? = null,
 )
 
 data class Glider(
@@ -28,7 +34,7 @@ data class Flight(
     val pilot: Pilot,
     val takeoff: Takeoff?,
     val startTime: Date,
-    val startPoint: Point,
+    val startPoint: Point?,
     val type: String,
     val distanceKm: Double,
     val score: Double,

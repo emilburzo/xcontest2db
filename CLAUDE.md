@@ -25,7 +25,8 @@ The app follows a three-layer pipeline: **HTTP fetch → HTML parse/map → DB p
 
 - **`main/Main.kt`** — Entry point. Wires `Db` and `Http` into `Xcontest2Db`, calls `fetchRecent()`.
 - **`service/Xcontest2Db.kt`** — Orchestrator. Fetches flight list pages, deduplicates against existing DB records, and persists new flights with their related entities (pilot, takeoff, glider) using get-or-create pattern.
-- **`service/mapper.kt`** — Parses xcontest HTML tables (Jsoup) into domain models. Handles two page layouts: world (`world=true`, pilot element has extra child) and Romania (`world=false`). Filters flights by takeoff country using `isTakeoffInRomania()` which checks for `flag_ro` CSS class on the takeoff column's flag `<span>`. Errors if the flag element is missing (HTML structure change detection).
+- **`service/mapper.kt`** — Parses xcontest HTML tables (Jsoup) into domain models. Handles two page layouts: world (`world=true`, pilot element has extra child) and Romania (`world=false`). Filters flights by takeoff country using `isTakeoffInRomania()` which checks for `flag_ro` CSS class on the takeoff column's flag `<span>`. Errors if the flag element is missing (HTML structure change detection). Rows are mapped individually so one unreadable row doesn't cost the whole page; if *every* row fails it throws, since that means the structure changed.
+- **`service/sites.kt`** — Looks up takeoff coordinates in xcontest's sites API for takeoffs the flights list only identifies by site id (see "Takeoff coordinates" below). Cached per run.
 - **`service/http/http.kt`** — HTTP client (Ktor/CIO). Uses a Browserless (headless Chrome) service to render JavaScript-heavy pages. Browserless URL is hardcoded in `http/constants.kt`.
 - **`db/db.kt`** — Database layer using Jetbrains Exposed (DSL mode). Connects to PostgreSQL via env vars (`DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASS`, `DB_NAME`).
 - **`db/gis.kt`** — Custom Exposed `ColumnType` for PostGIS `GEOGRAPHY(Point)` columns, bridging `org.postgis.Point` ↔ `PGgeography`.
@@ -83,6 +84,47 @@ xcontest.org is a JavaScript-heavy SPA. The server returns a shell HTML page, th
 4. Pagination uses **hash fragments** (`#flights[start]=200`), not query parameters. Hash changes trigger new API calls for subsequent pages.
 
 The API key (`XContest.API_KEY`) is static across the site: `03ECF5952EB046AC-A53195E89B7996E4-D1B128E82C3E2A66`.
+
+### Takeoff coordinates (changed in 2026)
+
+The takeoff column's `<a class="lau">` used to always link to the coordinate search, which is where the mapper got the takeoff coordinates from:
+
+```html
+<a class="lau" href=".../flights-search/?filter[point]=26.84893 47.4157&list[sort]=pts...">
+```
+
+Since 2026 the **world** list links takeoffs that have a registered site to the hot-spots page instead, which carries no coordinates at all — only a base64 encoded site id:
+
+```html
+<a class="lau" href=".../hotspots?detail#filter[date]=2026-08-09@filter[site]=NDkwNg.WnNXcB-qQ1cA">
+```
+
+`NDkwNg` decodes to `4906`, the site id. Only takeoffs *without* a registered site (including `?`) still use the old coordinate link — on a typical world page that's ~6 of 100 rows. **The Romania league pages have not been migrated** and still use the coordinate link for everything, which is why Romania kept parsing while world broke.
+
+This used to crash the whole world batch: `java.net.URL("...hotspots?detail#...").getQuery()` returns `"detail"`, which the mapper then tried to parse as a longitude (`NumberFormatException: For input string: "detail"`).
+
+`Takeoff.centroid` is therefore nullable, and coordinates are resolved at persist time by `Xcontest2Db.resolveTakeoff()`:
+
+1. coordinates inline in the row (old-style link) — unchanged behaviour
+2. our own `takeoffs` table, by name — covers every takeoff scraped before and keeps start points consistent with existing flights
+3. xcontest's sites API, by site id — for sites never seen before
+
+A flight whose coordinates can't be resolved is **not** persisted and is left for the next run (it never enters the "existing flights" set, so it's retried indefinitely) rather than being stored with made-up coordinates.
+
+### The sites API
+
+`GET /api/data/?sites/world/<volume>:<siteId>&lng=en&key=<API_KEY>` returns a single site:
+
+```json
+{"id":4906,"name":"Sticlaria","countryIso":"RO",
+ "position":{"longitude":26.84863,"latitude":47.4157,"altitude":412},"takeoffs":[...]}
+```
+
+Dropping `:<siteId>` and adding `&filter[country]=RO&list[num]=500` lists all 120 Romanian sites in one response. `<volume>` is the season (e.g. `2026`), read off the flights page via `mapVolume()` and defaulting to the current year — the data is effectively season-independent, so a mismatch is not fatal.
+
+Note the **flights** API (`?flights/...`) does *not* expose coordinates: its `takeoff` object is `{id, name, countryIso, countryName, link}` and `pointStart` only has `time`. The sites API is the only source.
+
+Like everything else, it has to be fetched through the browser — plain HTTP requests get `{"error":{"message":"Access forbidden for remote IP address ..."}}` even from a residential IP. `Http.getJsonContent()` handles this and unwraps the JSON that Chrome renders inside a `<pre>`.
 
 ### Cloudflare Turnstile protection
 
@@ -169,7 +211,7 @@ When `USE_FREE_PROXY=true` is set, `fetchRecent()` in `Xcontest2Db.kt`:
 6. Stops on the first proxy that returns real flight data
 7. If all proxies fail, logs an error
 
-**Note:** `BROWSERLESS_URL` must point to the Playwright content service (not the old browserless) when using free proxies, since only the Playwright service supports per-request proxy.
+**Note:** `BROWSERLESS_URL` must point to the Playwright content service (not the old browserless) when using free proxies, since only the Playwright service supports per-request proxy. Browserless validates its request body strictly and rejects the `proxy` field with HTTP 400 (`"proxy" is not allowed`) — including when it's null, which is why `BrowserlessContent` is annotated `@JsonInclude(NON_NULL)` so requests without a proxy work against either service.
 
 **Critical: User-Agent must match Chrome version.** The User-Agent strings in `server.mjs` **MUST** declare the same Chrome major version as the actual Chromium binary in the Docker image. A version mismatch (e.g., claiming Chrome 131 when the binary is Chrome 145) is a strong automation signal that causes Cloudflare Turnstile to fail with error 600010, even in headed mode. When upgrading the Playwright Docker image, always update the UA strings to match:
 ```bash

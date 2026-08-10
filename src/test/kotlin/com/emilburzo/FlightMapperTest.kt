@@ -5,6 +5,10 @@ import com.emilburzo.service.extractAvailableDatesFromDoc
 import com.emilburzo.service.http.parseFreeProxyList
 import com.emilburzo.service.isTakeoffInRomania
 import com.emilburzo.service.mapFlights
+import com.emilburzo.service.mapTakeoffCentroid
+import com.emilburzo.service.mapTakeoffSiteId
+import com.emilburzo.service.mapVolume
+import com.emilburzo.service.parseSitePosition
 import java.net.URI
 import org.jsoup.Jsoup
 import org.junit.Test
@@ -12,6 +16,7 @@ import net.postgis.jdbc.geometry.Point
 import java.util.*
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNull
 
 class FlightMapperTest {
 
@@ -220,6 +225,88 @@ class FlightMapperTest {
         assertFailsWith<IllegalStateException> { isTakeoffInRomania(noFlagRow) }
     }
 
+    /**
+     * Since 2026 xcontest links takeoffs that have a registered site to the
+     * hot-spots page instead of the coordinate search, so the row no longer
+     * carries the takeoff coordinates — only a base64 encoded site id.
+     */
+    @Test
+    fun testFlightsListWorldHotspotTakeoffs() {
+        val document = Jsoup.parse(getResourceAsText("/flights_list/recent_flights_world_hotspots.html"))
+        val flights = mapFlights(document, world = true)
+
+        assertEquals(100, flights.size)
+
+        // hot-spot link: no coordinates in the row, only the site id
+        val first = flights[0]
+        assertEquals(6790006, first.id)
+        assertEquals("Dragos Adam", first.pilot.name)
+        assertEquals("AdamDragos", first.pilot.username)
+        assertEquals("Sticlaria", first.takeoff!!.name)
+        assertEquals(4906, first.takeoff!!.siteId) // base64 "NDkwNg"
+        assertNull(first.takeoff!!.centroid)
+        assertNull(first.startPoint)
+        assertEquals("free flight", first.type)
+        assertEquals(49.70, first.distanceKm)
+        assertEquals(49.70, first.score)
+        assertEquals(112, first.airtime)
+        assertEquals("ADVANCE Tau DLS", first.glider.name)
+        assertEquals("C", first.glider.category)
+
+        // takeoffs without a registered site still link to the coordinate search
+        val tocile = flights.first { it.id == 6781647L }
+        assertEquals("Tocile", tocile.takeoff!!.name)
+        assertEquals(Point(24.160083, 45.6778), tocile.takeoff!!.centroid)
+        assertEquals(Point(24.160083, 45.6778), tocile.startPoint)
+        assertNull(tocile.takeoff!!.siteId)
+
+        assertEquals(94, flights.count { it.takeoff!!.siteId != null })
+        assertEquals(6, flights.count { it.takeoff!!.centroid != null })
+    }
+
+    @Test
+    fun testMapTakeoffSiteId() {
+        assertEquals(
+            4906,
+            mapTakeoffSiteId("https://www.xcontest.org/world/en/hotspots?detail#filter[date]=2026-08-09@filter[site]=NDkwNg.WnNXcB-qQ1cA")
+        )
+        assertNull(mapTakeoffSiteId("https://www.xcontest.org/world/en/flights-search/?filter[point]=24.16 45.67"))
+    }
+
+    @Test
+    fun testMapTakeoffCentroid() {
+        assertEquals(
+            Point(24.160083, 45.6778),
+            mapTakeoffCentroid("https://www.xcontest.org/world/en/flights-search/?filter[point]=24.160083 45.6778&list[sort]=pts&list[dir]=down&filter[radius]=500")
+        )
+        assertNull(mapTakeoffCentroid("https://www.xcontest.org/world/en/hotspots?detail#filter[site]=NDkwNg.WnNXcB-qQ1cA"))
+    }
+
+    @Test
+    fun testMapVolume() {
+        val document = Jsoup.parse(getResourceAsText("/flights_list/recent_flights_world_hotspots.html"))
+        assertEquals("2026", mapVolume(document))
+    }
+
+    /**
+     * One row we can't read must not cost us the rest of the page — but a page
+     * where nothing parses means the HTML structure changed, and that we do want
+     * to hear about.
+     */
+    @Test
+    fun testUnparseableRowDoesNotDropTheWholePage() {
+        val good = romanianFlightRow(id = 100, username = "testpilot")
+        val broken = romanianFlightRow(id = 101, username = "testpilot2").replace("title=\"FLID:101\"", "")
+
+        val flights = mapFlights(Jsoup.parse(flightsTable(good, broken)), world = true)
+        assertEquals(1, flights.size)
+        assertEquals(100, flights[0].id)
+
+        assertFailsWith<IllegalStateException> {
+            mapFlights(Jsoup.parse(flightsTable(broken)), world = true)
+        }
+    }
+
     @Test
     fun testFlightsListWithUtc() {
         val document = Jsoup.parse(getResourceAsText("/flights_list/with_utc.html"))
@@ -317,6 +404,50 @@ class FreeProxyListTest {
     }
 }
 
+class SitesTest {
+
+    @Test
+    fun testParseSitePosition() {
+        val json = """
+            {"id":4906,"name":"Sticlaria","namesAlternative":"","isWinch":false,"countryIso":"RO",
+             "countryName":"Romania","position":{"longitude":26.84863,"latitude":47.4157,"altitude":412},
+             "takeoffs":[{"id":6069,"name":"Sticlaria","position":{"longitude":26.84863,"latitude":47.4157,"altitude":412}}]}
+        """.trimIndent()
+
+        assertEquals(Point(26.84863, 47.4157), parseSitePosition(json))
+    }
+
+    @Test
+    fun testParseSitePositionError() {
+        assertNull(parseSitePosition("""{"error":{"code":0,"message":"Invalid source type 'takeoffs'"}}"""))
+        assertNull(parseSitePosition("""{"id":4906,"name":"Sticlaria"}"""))
+    }
+}
+
 fun getResourceAsText(path: String): String {
     return object {}.javaClass.getResource(path).readText()
 }
+
+private fun flightsTable(vararg rows: String) = """
+    <html><body>
+    <div id="flights"><table class="XClist"><tbody>
+    ${rows.joinToString("\n")}
+    </tbody></table></div>
+    </body></html>
+""".trimIndent()
+
+private fun romanianFlightRow(id: Long, username: String) = """
+    <tr id="flight-$id" class="">
+        <td title="FLID:$id">1</td>
+        <td title="submitted: 11.02.26"><div class="full">11.02.26 <em>12:00</em></div></td>
+        <td class="plt"><div class="full"><span class="cic flag_ro" title="Romania">RO</span><a class="plt" href="https://www.xcontest.org/world/en/pilots/detail:$username"><b>Test Pilot</b></a></div></td>
+        <td><div class="full"><span class="cic flag_ro" title="Romania">RO</span><a class="lau" href="https://www.xcontest.org/world/en/flights-search/?filter[point]=25.0 45.0&amp;list[sort]=pts" title="Romanian Takeoff">Romanian ...</a></div></td>
+        <td><div class="disc-ff" title="free flight"><em class="hide">FF</em></div></td>
+        <td class="km"><strong>10.00</strong> km</td>
+        <td class="pts"><strong>10.00</strong> p.</td>
+        <td class="dur"><strong><span class="d0"> </span><span class="d1">1 : 00</span></strong> h</td>
+        <td class="cat-B"><div title="Test Glider" class="sponsor test"><span class="hide">B</span></div></td>
+        <td><div class="for-qw"><div class="qw" title="quick view"></div></div></td>
+        <td class="detail-camera"><div><a class="detail" title="flight detail" href="https://www.xcontest.org/world/en/flights/detail:$username/11.02.2026/10:00"><span class="hide">flight detail</span></a></div></td>
+    </tr>
+""".trimIndent()
