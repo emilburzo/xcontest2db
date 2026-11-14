@@ -203,7 +203,7 @@ The `POST /content` API accepts an optional `proxy` field in the JSON body (e.g.
 #### Free proxy rotation in `fetchRecent()`
 
 When `USE_FREE_PROXY=true` is set, `fetchRecent()` in `Xcontest2Db.kt`:
-1. Scrapes HTTPS-capable proxies from `free-proxy-list.net` (via `Http.fetchFreeProxies()`)
+1. Scrapes HTTPS-capable proxies from `free-proxy-list.net` (via `Http.fetchFreeProxies()`), failing the job if that yields none
 2. Shuffles the list randomly
 3. Tries each proxy in turn, calling the Playwright content service with `{"proxy":"http://host:port"}` in the request body
 4. Validates the proxy using the **Romania URL first** (reliable — no hash-based country filter needed)
@@ -211,7 +211,9 @@ When `USE_FREE_PROXY=true` is set, `fetchRecent()` in `Xcontest2Db.kt`:
 6. Stops on the first proxy that returns real flight data
 7. If all proxies fail, logs an error
 
-**The free proxy list table** (`.fpl-list table`) has the columns `IP:Port | Protocol | Code | Country | Anonymity | Https | Last Checked`, with the port in a `<span class="fpl-port">` inside the first cell. `parseFreeProxyList()` finds the columns by header name and keeps only `HTTP` rows with `Https=yes` — SOCKS4 proxies are listed too and also claim `Https=yes`. If the table or those headers are missing it throws, logged as `failed to fetch free proxy list: ...`. **Either way the job still exits 0**, so the only symptom of a broken proxy source is `no free proxies available` in the job logs and no new flights. This happened in 2026-11: the table used to have separate `IP Address` / `Port` columns plus a `Google` one, and the old index-based parser silently returned 0 proxies for days.
+**The free proxy list table** (`.fpl-list table`) has the columns `IP:Port | Protocol | Code | Country | Anonymity | Https | Last Checked`, with the port in a `<span class="fpl-port">` inside the first cell. `parseFreeProxyList()` finds the columns by header name and keeps only `HTTP` rows with `Https=yes` — SOCKS4 proxies are listed too and also claim `Https=yes`. If the table or those headers are missing it throws.
+
+**A proxy list that can't be loaded (network error, non-2xx, unexpected structure) or has no usable proxies fails the job** with a non-zero exit — `failed to load the free proxy list` (with the cause) or `no free proxies available` — since nothing can be fetched without it. This is deliberate: in 2026-11 the table changed (it used to have separate `IP Address` / `Port` columns plus a `Google` one), the old index-based parser silently returned 0 proxies, and as the job still exited 0, nobody noticed for days. Ktor's network exceptions carry no frames of ours, hence the wrapping in `fetchFreeProxies()`. **All proxies failing still exits 0**: free proxies are unreliable, so that alone isn't treated as a failure.
 
 **Note:** `BROWSERLESS_URL` must point to the Playwright content service (not the old browserless) when using free proxies, since only the Playwright service supports per-request proxy. Browserless validates its request body strictly and rejects the `proxy` field with HTTP 400 (`"proxy" is not allowed`) — including when it's null, which is why `BrowserlessContent` is annotated `@JsonInclude(NON_NULL)` so requests without a proxy work against either service.
 

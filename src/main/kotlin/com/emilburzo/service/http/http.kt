@@ -50,7 +50,11 @@ class Http {
      */
     fun getContent(url: String): String {
         return runBlocking {
-            client.get(url).bodyAsText()
+            val response = client.get(url)
+            if (!response.status.isSuccess()) {
+                throw RuntimeException("HTTP ${response.status.value} for $url")
+            }
+            response.bodyAsText()
         }
     }
 
@@ -59,15 +63,14 @@ class Http {
      * as "http://host:port" strings, shuffled randomly.
      */
     fun fetchFreeProxies(): List<String> {
-        return try {
-            val html = getContent(FREE_PROXY_LIST_URL)
-            val proxies = parseFreeProxyList(html)
-            log.info("fetched ${proxies.size} HTTPS-capable free proxies")
-            proxies.shuffled()
+        // network errors come out of ktor's coroutines without our frames, so say what failed
+        val proxies = try {
+            parseFreeProxyList(getContent(FREE_PROXY_LIST_URL))
         } catch (e: Exception) {
-            log.error("failed to fetch free proxy list: ${e.message}")
-            emptyList()
+            throw IllegalStateException("failed to load the free proxy list", e)
         }
+        log.info("fetched ${proxies.size} HTTPS-capable free proxies")
+        return proxies.shuffled()
     }
 }
 

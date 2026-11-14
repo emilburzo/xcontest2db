@@ -28,11 +28,9 @@ class Xcontest2Db(
         val useProxy = System.getenv("USE_FREE_PROXY")?.lowercase() == "true"
 
         if (useProxy) {
+            // without proxies nothing gets fetched, so fail the job rather than pass quietly
             val proxies = http.fetchFreeProxies()
-            if (proxies.isEmpty()) {
-                log.error("no free proxies available, cannot fetch recent flights")
-                return
-            }
+            check(proxies.isNotEmpty()) { "no free proxies available, cannot fetch recent flights" }
 
             fetchRecentWithProxies(proxies)
         } else {
