@@ -2,6 +2,7 @@ package com.emilburzo
 
 import com.emilburzo.db.toLocalDateTime
 import com.emilburzo.service.extractAvailableDatesFromDoc
+import com.emilburzo.service.http.FREE_PROXY_LIST_URL
 import com.emilburzo.service.http.parseFreeProxyList
 import com.emilburzo.service.isTakeoffInRomania
 import com.emilburzo.service.mapFlights
@@ -14,8 +15,10 @@ import org.jsoup.Jsoup
 import org.junit.Test
 import net.postgis.jdbc.geometry.Point
 import java.util.*
+import kotlin.test.assertContains
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertFalse
 import kotlin.test.assertNull
 
 class FlightMapperTest {
@@ -391,9 +394,40 @@ class FlightMapperTest {
 
 class FreeProxyListTest {
 
+    /**
+     * IP and port share a column, and SOCKS4 proxies are listed alongside the
+     * HTTP ones, claiming https support as well.
+     */
+    @Test
+    fun testParseFreeProxyList() {
+        val proxies = parseFreeProxyList(getResourceAsText("/free_proxy_list/free_proxy_list.html"))
+
+        // of 300 rows: 62 HTTP with https, 222 HTTP without, 16 SOCKS4
+        assertEquals(62, proxies.size)
+        assertContains(proxies, "http://18.188.168.99:8741")
+        assertFalse("http://103.70.122.147:8080" in proxies) // no https
+        assertFalse("http://185.8.21.140:1080" in proxies) // SOCKS4
+        for (proxy in proxies) {
+            assert(proxy.matches(Regex("http://[^:]+:\\d+"))) { "Proxy should match http://host:port, got: $proxy" }
+        }
+    }
+
+    @Test
+    fun testParseFreeProxyListStructureChanged() {
+        val html = """
+            <div class="table-responsive fpl-list"><table>
+            <thead><tr><th>IP Address</th><th>Port</th><th>Https</th></tr></thead>
+            <tbody><tr><td>1.2.3.4</td><td>8080</td><td>yes</td></tr></tbody>
+            </table></div>
+        """.trimIndent()
+
+        assertFailsWith<IllegalStateException> { parseFreeProxyList(html) }
+        assertFailsWith<IllegalStateException> { parseFreeProxyList("<html><body></body></html>") }
+    }
+
     @Test
     fun testParseFreeProxyListLive() {
-        val html = URI("https://free-proxy-list.net/en/").toURL().readText()
+        val html = URI(FREE_PROXY_LIST_URL).toURL().readText()
         val proxies = parseFreeProxyList(html)
 
         assert(proxies.isNotEmpty()) { "Expected at least one HTTPS-capable proxy, got 0. HTML structure may have changed." }

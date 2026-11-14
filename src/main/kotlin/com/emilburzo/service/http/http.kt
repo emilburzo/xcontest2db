@@ -60,7 +60,7 @@ class Http {
      */
     fun fetchFreeProxies(): List<String> {
         return try {
-            val html = getContent("https://free-proxy-list.net/en/")
+            val html = getContent(FREE_PROXY_LIST_URL)
             val proxies = parseFreeProxyList(html)
             log.info("fetched ${proxies.size} HTTPS-capable free proxies")
             proxies.shuffled()
@@ -71,22 +71,29 @@ class Http {
     }
 }
 
+private val HOST_PORT = Regex("[\\w.-]+:\\d+")
+
+/**
+ * Columns are looked up by their header so that a layout change fails loudly
+ * instead of quietly yielding no proxies. SOCKS proxies are listed too, but
+ * we only want HTTP ones.
+ */
 fun parseFreeProxyList(html: String): List<String> {
-    val doc = Jsoup.parse(html)
-    val proxies = mutableListOf<String>()
+    val table = Jsoup.parse(html).selectFirst(".fpl-list table")
+        ?: error("free proxy list table not found, the page structure has probably changed")
 
-    for (row in doc.select(".fpl-list table tbody tr")) {
-        val cells = row.select("td")
-        if (cells.size < 8) continue
+    val headers = table.select("thead th").map { it.text().filterNot(Char::isWhitespace).lowercase() }
+    val address = headers.indexOf("ip:port")
+    val protocol = headers.indexOf("protocol")
+    val https = headers.indexOf("https")
+    check(address >= 0 && protocol >= 0 && https >= 0) { "unexpected free proxy list columns: $headers" }
 
-        val ip = cells[0].text().trim()
-        val port = cells[1].text().trim()
-        val https = cells[6].text().trim().lowercase()
+    return table.select("tbody tr").mapNotNull { row ->
+        val cells = row.select("td").map { it.text().filterNot(Char::isWhitespace) }
+        val hostPort = cells.getOrNull(address)?.takeIf { HOST_PORT.matches(it) }
+        val usable = cells.getOrNull(protocol).equals("http", ignoreCase = true) &&
+                cells.getOrNull(https).equals("yes", ignoreCase = true)
 
-        if (https == "yes" && ip.isNotEmpty() && port.isNotEmpty()) {
-            proxies.add("http://$ip:$port")
-        }
+        if (usable && hostPort != null) "http://$hostPort" else null
     }
-
-    return proxies
 }
