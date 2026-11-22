@@ -59,6 +59,16 @@ spec:
                   name: playwright-content.proxy
                   key: password
                   optional: true
+          # each browser gets a fresh profile in /tmp, and --disable-dev-shm-usage puts its shared memory there too:
+          # keep both in RAM instead of writing them to disk
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+      volumes:
+        - name: tmp
+          emptyDir:
+            medium: Memory
+            sizeLimit: 256Mi
 ---
 apiVersion: v1
 kind: Service
