@@ -81,33 +81,44 @@ function randomUserAgent() {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
-// Cache health check result to avoid launching a browser on every probe
+// The health check starts a browser the way requests do and renders a local page. It never touches the
+// network: an internet or proxy outage isn't something a restart can fix. Each check starts a whole
+// browser, so a pass is cached for longer than a failure, and only one check runs at a time.
+const HEALTH_PASS_CACHE_MS = 5 * 60_000;
+const HEALTH_FAIL_CACHE_MS = 60_000;
 let lastHealthCheck = { time: 0, ok: false };
-const HEALTH_CACHE_MS = 60_000;
+let runningHealthCheck = null;
 
-async function checkBrowserHealth() {
-  const now = Date.now();
-  if (now - lastHealthCheck.time < HEALTH_CACHE_MS) {
-    return lastHealthCheck.ok;
-  }
+async function launchAndRender() {
   let browser;
   try {
-    browser = await chromium.launch({ headless: false, args: ['--no-sandbox', '--disable-dev-shm-usage'] });
+    browser = await chromium.launch({ headless: false, args: ['--no-sandbox', '--disable-dev-shm-usage'], timeout: 30_000 });
     const page = await browser.newPage();
-    const response = await page.goto('https://www.google.com/robots.txt', { timeout: 30_000 });
-    lastHealthCheck = { time: now, ok: response?.ok() };
-    return lastHealthCheck.ok;
+    await page.setContent('<title>ok</title>');
+    return (await page.title()) === 'ok';
   } catch (err) {
     console.error('Health check failed:', err.message);
-    lastHealthCheck = { time: now, ok: false };
     return false;
   } finally {
     if (browser) await browser.close().catch(() => {});
   }
 }
 
+async function checkBrowserHealth() {
+  const maxAge = lastHealthCheck.ok ? HEALTH_PASS_CACHE_MS : HEALTH_FAIL_CACHE_MS;
+  if (Date.now() - lastHealthCheck.time < maxAge) {
+    return lastHealthCheck.ok;
+  }
+  runningHealthCheck ??= launchAndRender().then((ok) => {
+    lastHealthCheck = { time: Date.now(), ok };
+    runningHealthCheck = null;
+    return ok;
+  });
+  return runningHealthCheck;
+}
+
 const server = http.createServer(async (req, res) => {
-  // Health check endpoint for K8s probes — launches a real browser to verify it works
+  // Health check endpoint for K8s probes
   if (req.method === 'GET' && req.url === '/health') {
     const ok = await checkBrowserHealth();
     res.writeHead(ok ? 200 : 503, { 'Content-Type': 'application/json' });
